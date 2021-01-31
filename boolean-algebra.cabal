@@ -1,0 +1,65 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 40fa426b9d18c60adaa0fe6853caa2590a1ea56d1d5e310f6a5736b6235ab38f
+
+name:           boolean-algebra
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/xicesky/boolean-algebra#readme>
+homepage:       https://github.com/xicesky/boolean-algebra#readme
+bug-reports:    https://github.com/xicesky/boolean-algebra/issues
+author:         Markus Dangl
+maintainer:     sky@q1cc.net
+copyright:      (c) 2016 Markus Dangl
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/xicesky/boolean-algebra
+
+library
+  exposed-modules:
+      BooleanAlgebra
+  other-modules:
+      Paths_boolean_algebra
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , data-fix
+  default-language: Haskell2010
+
+executable boolean-algebra-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_boolean_algebra
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , boolean-algebra
+    , data-fix
+  default-language: Haskell2010
+
+test-suite boolean-algebra-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_boolean_algebra
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , boolean-algebra
+    , data-fix
+  default-language: Haskell2010
