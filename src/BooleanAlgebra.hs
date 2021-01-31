@@ -48,45 +48,6 @@ ana = unfoldFix
 {-----------------------------------------------------------------------------}
 -- Thinking
 
--- type L2Algebra f a = f (f a) -> f a
-type L2Algebra f a = Algebra f (f a)
-
-l2cata :: Functor f => L2Algebra f a -> Fix f -> f a
-l2cata = cata
--- This works perfectly when a = Fix f
-
--- type Rewriter1 f = f (Fix f) -> Fix f
-type Rewriter1 f = Algebra f (Fix f)
-idRewriter1 :: Rewriter1 f
-idRewriter1 = Fix
-
--- type Rewriter2 f = f (f (Fix f)) -> f (Fix f)
-type Rewriter2 f = Algebra f (f (Fix f))
-idRewriter2 :: Functor f => Rewriter2 f
-idRewriter2 = fmap Fix
-
-rw2cata :: Functor f => Rewriter2 f -> Fix f -> f (Fix f)
-rw2cata = l2cata
-
--- and then there is the fucking partial function...
-type MbAlgebra f a = f a -> Maybe a
--- We can't really do anything here, there is no way
---  to get an a from f a in the "Nothing" case
---  but there could be, if we have a "fallback" algebra:
-type OptAlgebra f a = (f a -> Maybe a, f a -> a)
--- The second function will most likely just be "Fix", because it does nothing
-
--- ?? a pair of functions is equal to a function that returns a pair
--- ?? type OptAlgebra f a = f a -> (Maybe a, a)
--- ?? This doens't look useful at first sight
-
--- We could use something like this to resolve
-fallback :: (a -> b) -> (a -> Maybe b) -> a -> b
--- This looks like the reader monad over a fromMaybe...
-fallback = liftM2 fromMaybe
--- Or, implemented boringly:
--- fallback f g x = fromMaybe (g x) (f x)
-
 {-----------------------------------------------------------------------------}
 
 -- Boolean Values
@@ -115,13 +76,7 @@ instance Functor (BooleanF vn) where
 
 type BooleanExpr vn = Fix (BooleanF vn)
 
--- Think about cata this way:
-cataBE :: (BooleanF vn a -> a) -> BooleanExpr vn -> a
-cataBE = cata
-
--- Transformation of exprs
-transBE :: (BooleanF vn (BooleanExpr vn) -> BooleanExpr vn) -> BooleanExpr vn -> BooleanExpr vn
-transBE = cataBE
+-- FIXME: Show instance for BooleanExpr
 
 {-----------------------------------------------------------------------------}
 -- It's annoying to write "Fix" everywhere, so here are some shortcuts
@@ -145,6 +100,8 @@ bOr :: BooleanExpr vn -> BooleanExpr vn -> BooleanExpr vn
 bOr e1 e2 = Fix $ BFOr e1 e2
 
 {-----------------------------------------------------------------------------}
+-- "Pretty" printer
+-- TODO: could be prettier (and use Doc instead of string)
 
 simplePretty :: Show vn => BooleanExpr vn -> String
 simplePretty = cata prettyf where
@@ -161,39 +118,30 @@ exampleExpr01 = (bNot (bVar "x" `bAnd` bVar "y")) `bAnd` bVar "z"
 -- exampleExpr01 = (BENot (BEVariable "x" `BEAnd` BEVariable "y")) `BEAnd` BEVariable "z"
 
 {-----------------------------------------------------------------------------}
+-- Simplifier
 
 -- ?? simp :: f (f a) -> Maybe (f a)
 simp :: BooleanF vn (BooleanF vn a) -> Maybe (BooleanF vn a)
-simp (BFNot (BFVal BTrue)) = Just (BFVal BFalse)
-simp (BFNot (BFVal BFalse)) = Just (BFVal BTrue)
-simp (BFAnd (BFVal BTrue) e) = Just e
-simp (BFAnd (BFVal BFalse) _) = Just (BFVal BFalse)
-simp (BFAnd e (BFVal BTrue)) = Just e
-simp (BFAnd _ (BFVal BFalse)) = Just (BFVal BFalse)
-simp (BFOr (BFVal BTrue) _) = Just (BFVal BTrue)
-simp (BFOr (BFVal BFalse) e) = Just e
-simp (BFOr _ (BFVal BTrue)) = Just (BFVal BTrue)
-simp (BFOr e (BFVal BFalse)) = Just e
+simp (BFNot (BFVal BTrue))      = Just (BFVal BFalse)
+simp (BFNot (BFVal BFalse))     = Just (BFVal BTrue)
+simp (BFAnd (BFVal BTrue) e)    = Just e
+simp (BFAnd (BFVal BFalse) _)   = Just (BFVal BFalse)
+simp (BFAnd e (BFVal BTrue))    = Just e
+simp (BFAnd _ (BFVal BFalse))   = Just (BFVal BFalse)
+simp (BFOr  (BFVal BTrue) _)    = Just (BFVal BTrue)
+simp (BFOr  (BFVal BFalse) e)   = Just e
+simp (BFOr  _ (BFVal BTrue))    = Just (BFVal BTrue)
+simp (BFOr  e (BFVal BFalse))   = Just e
 simp _ = Nothing
 
 simplifyPrimitive :: BooleanExpr vn -> BooleanExpr vn
 simplifyPrimitive = let
-    simp2 :: BooleanF vn (BooleanF vn (BooleanExpr vn)) -> BooleanF vn (BooleanExpr vn)
-    simp2 = (liftM2 fromMaybe) (fmap Fix) simp
-    {-
-    simp2 e = case simp e of
-        Nothing -> fmap Fix e
-        Just e  -> simp2 $ fmap unFix e
-    -}
-    -- simp2 e = maybe (fmap Fix e) (simp2 . fmap unFix) (simp e)
-
-    in Fix . (cata simp2)
-
--- simp' :: BooleanF vn (BooleanF vn (BooleanExpr vn)) -> BooleanF vn (BooleanExpr vn)
--- simp' = (liftM2 fromMaybe) (fmap Fix) simp
-
--- simplifyPrimitive2 :: BooleanExpr vn -> BooleanExpr vn
--- simplifyPrimitive2 = Fix . cata simp'
+    simp' :: BooleanF vn (BooleanF vn (BooleanExpr vn)) -> BooleanF vn (BooleanExpr vn)
+    simp' = (liftM2 fromMaybe) (fmap Fix) simp
+    in Fix . (cata simp')
 
 exampleExpr02 :: BooleanExpr String
 exampleExpr02 = bNot ((bNot bTrue) `bAnd` (bNot bFalse))
+
+{-----------------------------------------------------------------------------}
+
