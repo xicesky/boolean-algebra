@@ -5,6 +5,10 @@ import BooleanAlgebra
 {- Notes & interesting reads:
     https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
     https://en.wikipedia.org/wiki/Constraint_satisfaction_problem
+    https://curry.pages.ps.informatik.uni-kiel.de/curry-lang.org/
+
+Inspiration for solver:
+    https://www-ps.informatik.uni-kiel.de/~sebf/data/pub/atps09.pdf
 -}
 
 pslBE :: Show vn => BooleanExpr vn -> IO ()
