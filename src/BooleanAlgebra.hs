@@ -1,3 +1,14 @@
+
+-- "Standard" extensions
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE InstanceSigs           #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE DeriveFunctor          #-} 
+
+-- Extensions that we are likely to use
+{-# LANGUAGE TypeFamilies #-}
+
 module BooleanAlgebra where
 {-
 
@@ -44,6 +55,13 @@ module BooleanAlgebra
     https://bartoszmilewski.com/2017/02/28/f-algebras/
     https://www-ps.informatik.uni-kiel.de/~sebf/projects/sat-solver/Control/Monad/Constraint/Boolean.lhs.html
     Recursion schemes: https://blog.sumtypeofway.com/archive.html
+
+    Packages to use:
+        https://hackage.haskell.org/package/compdata
+        https://hackage.haskell.org/package/recursion-schemes
+
+    TODO:
+        - Get rid of Data.Fix (use compdata instead)
 -}
 
 import Data.Functor.Classes (Eq1(..))
@@ -271,7 +289,105 @@ exampleExpr04 = bVar "a" `bAnd` bNot (bVar "a")
 -- Basic conversion to CNF
 -- doesn't add any variables
 
--- TODO
+-- CNF in 3 steps:
+--      Simplify primitives (see above)
+--      Push in negations
+--      Distribute disjunctions over conjunctions
+
+-- pushNeg :: BooleanExpr v -> BooleanExpr v
+-- pushNeg :: BooleanF vn (BooleanF vn a) -> Maybe (BooleanF vn a)
+pushNeg :: BooleanExpr v -> BooleanExpr v
+pushNeg = ana (unFix . f . fmap unFix . unFix) where
+    f :: BooleanF v (BooleanF v (BooleanExpr v)) -> BooleanExpr v
+    f (BFNot (BFAnd e1 e2)) = bOr (bNot e1) (bNot e2)
+    f (BFNot (BFOr e1 e2)) = bAnd (bNot e1) (bNot e2)
+    f (BFNot (BFNot e)) = e
+    f other = Fix $ fmap Fix $ other
+
+pushOr :: BooleanExpr v -> BooleanExpr v
+pushOr = ana (unFix . f . fmap unFix . unFix) where
+    f :: BooleanF v (BooleanF v (BooleanExpr v)) -> BooleanExpr v
+    f (BFOr (BFAnd e1 e2) x) = bAnd (bOr e1 (Fix x)) (bOr e2 (Fix x))
+    f (BFOr x (BFAnd e1 e2)) = bAnd (bOr (Fix x) e1) (bOr (Fix x) e2)
+    f other = Fix $ fmap Fix $ other
+
+-- Idea of how pushOr deals with both hands:
+--    (a ∆ b) v (c ∆ d)
+--    (a v (c ∆ d)) ∆ (b v (c ∆ d))
+--    ((a v c) ∆ (a v d)) ∆ ((b v c) ∆ (b v d))
+
+toCNF :: BooleanExpr v -> BooleanExpr v
+toCNF = pushOr . pushNeg . simplifyPrimitive
+
+-- Test it on this, e.g.: pushOr $ pushNeg $ exampleExpr05
+exampleExpr05 :: BooleanExpr String
+exampleExpr05 = bNot $ ((bNot $ bVar "a") `bOr` bVar "b") `bAnd` (bNot $ bVar "c" `bAnd` bVar "d")
+
+{-----------------------------------------------------------------------------}
+-- A CNF datatype
+
+-- Start simple, then generalize using https://wiki.haskell.org/GHC/Type_families
+data    Lit v = Pos v | Neg v               deriving (Show, Eq, Functor)
+newtype CNF v = CNF { unCNF :: [[Lit v]] }  deriving (Show, Eq, Functor)
+
+negateLit :: Lit v -> Lit v
+negateLit (Pos v) = Neg v
+negateLit (Neg v) = Pos v
+
+data CNFHelper v
+    = HLit (Lit v)
+    | HDisj [Lit v]
+    | HConj [[Lit v]]
+    deriving (Show, Eq)
+
+-- Collect whole subexpressions with common operator in lists
+collectCNF :: forall v. BooleanExpr v -> CNF v
+collectCNF = convert . cata collect where
+    -- -- Correct type would be: ??? Fix (Not :+: Var) v -> Bool -> Lit
+    -- collectLiteral :: BooleanExpr v -> Lit v
+    -- collectLiteral (Fix (BFNot (Fix (BFVariable vn)))) = Neg vn
+    -- collectLiteral (Fix (BFVariable vn)) = Pos vn
+    -- collectLiteral e = error $ "cannot collect literal from " ++ show e
+
+    -- -- Correct type: ??? Fix (BOr :+: Lit) v -> [Lit v]
+    -- collectOr :: BooleanF v [Lit v] -> [Lit v]
+    -- collectOr (BFOr e1 e2) = e1 ++ e2
+    -- collectOr _ = error "FIXME"
+
+    -- collectAnd :: BooleanF v [[Lit v]] -> [[Lit v]]
+    -- collectAnd (BFAnd e1 e2) = e1 ++ e2
+    -- collectAnd _ = error "FIXME"
+
+    upgr :: CNFHelper v -> CNFHelper v
+    upgr (HLit l) = HDisj [l]
+    upgr (HDisj t) = HConj [t]
+    upgr (HConj _) = error "fail"
+
+    -- Compose above functions... how?
+    collect :: BooleanF v (CNFHelper v) -> CNFHelper v
+    collect (BFVariable vn) = HLit (Pos vn)
+    collect (BFNot (HLit l)) = HLit (negateLit l)
+
+    collect (BFOr (HConj _) _) = error $ "disj over conj"
+    collect (BFOr _ (HConj _)) = error $ "disj over conj"
+    collect (BFOr (l) (HLit r)) = collect (BFOr (l) (HDisj $ [r]))
+    collect (BFOr (HLit l) (HDisj rs)) = HDisj $ l : rs
+    collect (BFOr (HDisj ls) (HDisj rs)) = HDisj $ ls ++ rs
+
+    collect (BFAnd (HConj ls) (HConj rs)) = HConj $ ls ++ rs
+    collect (BFAnd l (HDisj r)) = collect $ BFAnd l $ upgr $ HDisj r
+    collect (BFAnd l (HLit r)) = collect $ BFAnd l $ upgr $ HLit r
+    collect (BFAnd l r) = collect (BFAnd (upgr l) r)
+
+    collect (BFVal BTrue) = HConj []
+    collect (BFVal BFalse) = HDisj []
+
+    convert :: CNFHelper v -> CNF v
+    convert (HConj x) = CNF x
+    convert x = convert $ upgr x
+
+toCNFData :: BooleanExpr v -> CNF v
+toCNFData = collectCNF . toCNF
 
 {-----------------------------------------------------------------------------}
 -- Tseitin transformation to CNF
@@ -282,3 +398,8 @@ exampleExpr04 = bVar "a" `bAnd` bNot (bVar "a")
 
 {-----------------------------------------------------------------------------}
 -- Fin
+
+-- Further ideas: Maybe do something with
+--  https://en.wikipedia.org/wiki/Karnaugh_map
+--  https://en.wikipedia.org/wiki/Quine%E2%80%93McCluskey_algorithm
+-- (these require a sat solver)

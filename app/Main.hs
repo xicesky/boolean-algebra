@@ -15,8 +15,20 @@ Inspiration for solver:
 pslBE :: Show vn => BooleanExpr vn -> IO ()
 pslBE = putStrLn . simplePretty
 
+demo :: Show vn => BooleanExpr vn -> IO ()
+demo ex = do
+    putStr "Original    : "; pslBE ex
+    putStr "Simplified  : "; pslBE $ simplifyPrimitive ex
+    putStr "CNF         : "; pslBE $ toCNF ex
+    putStr "CNF-Data    : "; putStrLn $ show $ toCNFData ex
+
 main :: IO ()
 main = do
-    pslBE exampleExpr01
-    pslBE exampleExpr02
-    pslBE (simplifyPrimitive exampleExpr02)
+    -- pslBE exampleExpr01
+    -- pslBE exampleExpr02
+    -- pslBE (simplifyPrimitive exampleExpr02)
+    demo exampleExpr01
+    putStrLn ""
+
+    demo exampleExpr05
+    putStrLn ""
