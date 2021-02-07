@@ -9,6 +9,7 @@ import BooleanAlgebra
 
 Inspiration for solver:
     https://www-ps.informatik.uni-kiel.de/~sebf/data/pub/atps09.pdf
+    http://hackage.haskell.org/package/cflp
 -}
 
 pslBE :: Show vn => BooleanExpr vn -> IO ()
