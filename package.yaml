@@ -23,7 +23,9 @@ dependencies:
 - base >= 4.7 && < 5
 - data-fix
 - mtl
+- transformers
 - deriving-compat
+- containers
 
 library:
   source-dirs: src

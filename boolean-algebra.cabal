@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c1087c42d466debc47ad9649f66de00d57e3d0674608b68777dde4ded5876476
+-- hash: 2e15f53eea92c7b6b664b20e163e592401b462496b42c655407221bd3f45bcfa
 
 name:           boolean-algebra
 version:        0.1.0.0
@@ -37,9 +37,11 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , containers
     , data-fix
     , deriving-compat
     , mtl
+    , transformers
   default-language: Haskell2010
 
 executable boolean-algebra-exe
@@ -52,9 +54,11 @@ executable boolean-algebra-exe
   build-depends:
       base >=4.7 && <5
     , boolean-algebra
+    , containers
     , data-fix
     , deriving-compat
     , mtl
+    , transformers
   default-language: Haskell2010
 
 test-suite boolean-algebra-test
@@ -68,7 +72,9 @@ test-suite boolean-algebra-test
   build-depends:
       base >=4.7 && <5
     , boolean-algebra
+    , containers
     , data-fix
     , deriving-compat
     , mtl
+    , transformers
   default-language: Haskell2010

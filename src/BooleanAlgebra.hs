@@ -69,6 +69,11 @@ import Data.Fix (Fix(..), foldFix, unfoldFix)
 import Data.Maybe (fromMaybe)
 import Control.Monad (liftM2)
 
+-- Sets and Reader to handle variables
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Control.Monad.Trans.Reader
+
 {-----------------------------------------------------------------------------}
 
 
@@ -323,6 +328,8 @@ toCNF = pushOr . pushNeg . simplifyPrimitive
 exampleExpr05 :: BooleanExpr String
 exampleExpr05 = bNot $ ((bNot $ bVar "a") `bOr` bVar "b") `bAnd` (bNot $ bVar "c" `bAnd` bVar "d")
 
+-- TODO: Function to right-chain repeated applications of "And" and "Or"
+
 {-----------------------------------------------------------------------------}
 -- A CNF datatype
 
@@ -394,7 +401,46 @@ toCNFData = collectCNF . toCNF
 -- Adds new variables to avoid term explosion
 -- https://en.wikipedia.org/wiki/Tseytin_transformation
 
--- TODO
+-- Helpers to handle variables
+class (Ord vn, Monoid vn) => Nominal vn where
+    createSuffix :: Int -> vn
+
+instance Nominal String where
+    createSuffix = show
+
+freeVars :: forall v. Nominal v => BooleanExpr v -> Set v
+freeVars = cata findVars where
+    findVars :: BooleanF v (Set v) -> Set v
+    findVars (BFVal _) = Set.empty
+    findVars (BFVariable vn) = Set.singleton vn
+    findVars (BFNot s) = s
+    findVars (BFAnd s1 s2) = Set.union s1 s2
+    findVars (BFOr s1 s2) = Set.union s1 s2
+
+newVarName :: forall v. Nominal v => v -> Set v -> v
+newVarName prefix taken = mkVar 0 where
+    mkVar :: Int -> v
+    mkVar i = let
+        name = prefix <> createSuffix i
+        in if name `Set.member` taken
+        then mkVar (i+1)
+        else name
+
+
+-- Reader is not enough: Creating a variable alters the only (the
+--  "global") context we have .
+-- runVars :: Nominal v => BooleanExpr v -> Reader (Set v) a -> a
+-- runVars ex reader = runReader reader $ freeVars ex
+
+-- tseitinTrans :: Nominal v => BooleanExpr v -> BooleanExpr v
+-- tseitinTrans expr = _ where
+--     trans :: BooleanExpr v -> BooleanExpr v
+--     trans 
+
+    -- "value, variable, not" are gone (by simplifications)
+    -- that leaves interwoven disjunktions and conjunktions
+    -- the only problem are disjunktions over conjunctions, these
+    -- are exactly the cases that "pushOr" handles
 
 {-----------------------------------------------------------------------------}
 -- Fin
