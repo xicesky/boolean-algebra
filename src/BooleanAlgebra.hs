@@ -43,6 +43,7 @@ import Data.Comp.Equality ()        -- for the Eq instance
 
 import Data.Bool (bool)
 import Data.List (intersperse)
+import Control.Monad (join)
 
 {-----------------------------------------------------------------------------}
 -- Thinking
@@ -503,13 +504,71 @@ exampleExpr04 = (iBVar "a" `iBAnd` iBVar "b") `iBOr` (iBVar "c" `iBAnd` iBVar "d
 -- Distributes disjunctions over conjunctions:
 --      a ∨ (b ∧ c) = (a ∨ b) ∧ (a ∨ c)
 
+type CNF = BooleanCD (BooleanLit ())
+
+-- Shorthands
+lPos :: String -> BooleanLit a
+lPos = BooleanLit True
+
+lNeg :: String -> BooleanLit a
+lNeg = BooleanLit False
+
+-- Pretty-printer for CNF
+-- Idea: Maybe print each disjunktion on a seperate line
+instance PrettyAlmostBool a => PrettyAlmostBool (BooleanCD a) where
+    prettyPrintAB :: BooleanCD a -> Int -> ShowS
+    prettyPrintAB = prettyPrintBoolAlg . fmap prettyPrintAB where
+
+-- a ∨ (x0 ∧ x1 ∧ ...) = (a ∨ x0) ∧ (a ∨ x1) ∧ ...
+distrLit :: BooleanLit a -> [[BooleanLit a]] -> [[BooleanLit a]]
+distrLit a xs = fmap (a :) xs
+
+-- (a0 ∨ ...) ∨ (x0 ∧ ...) = (a0 ∨ ... ∨ x0) ∧ ...
+distrDisj :: [BooleanLit a] -> [[BooleanLit a]] -> [[BooleanLit a]]
+distrDisj as xs = fmap (as ++) xs
+
+-- (as0 ∧ as1 ∧ ...) ∨ (x0 ∧ ...) = (as0 ∨ (x0 ...)) ∧ (as1 ∨ (x0 ...)) ∧ ...
+distrConj :: [[BooleanLit a]] -> [[BooleanLit a]] -> [[BooleanLit a]]
+distrConj ass xs = join $ fmap (\as -> distrDisj as xs) ass
+
+-- Disjunction of two CNFs
+distrCNF :: CNF -> CNF -> CNF
+distrCNF (BooleanCD a) (BooleanCD x) = BooleanCD $ distrConj a x
+
+-- Conjunction of two CNFs
+joinCNF :: CNF -> CNF -> CNF
+joinCNF (BooleanCD a) (BooleanCD x) = BooleanCD $ a ++ x
+
+-- Distribute Disjunctions over Conjunctions (limited to BooleanCD)
+class Functor f => DistributeDoC f where
+    distributeDoC :: Alg f CNF
+
+-- Lift aggregateCD over sums of functors
+$(deriveLiftSum [''DistributeDoC])
+
+instance DistributeDoC BooleanLit where
+    distributeDoC :: BooleanLit CNF -> CNF
+    distributeDoC lit = BooleanCD [[fmap undefined lit]]
+
+instance DistributeDoC BooleanCD where
+    distributeDoC :: BooleanCD CNF -> CNF
+    distributeDoC (BooleanCD conjs) = foldr1 joinCNF $ fmap distr conjs where
+        distr :: [CNF] -> CNF
+        distr (x:[]) = x
+        distr (x:xs) = distr $ fmap (distrCNF x) xs
+
+distributeToCNF :: BooleanExprCDLit -> CNF
+distributeToCNF = cata distributeDoC
+
+exampleCNF :: CNF
+exampleCNF = BooleanCD [ [ lPos "a", lNeg "b" ], [ lNeg "c", lPos "d" ] ]
+
 {-----------------------------------------------------------------------------}
 -- Basic conversion to CNF
 -- doesn't add any variables
 
--- TODO
--- toCNF :: BooleanExpr v -> BooleanExpr v
--- toCNF = pushOr . pushNeg . simplifyPrimitive
+toCNF :: BooleanExpr -> CNF
+toCNF = distributeToCNF . aggregateConjDisj' . pushNegations' . simplifyPrimitive
 
 -- Test it on this, e.g.: pushOr $ pushNeg $ exampleExpr05
 exampleExpr05 :: BooleanExpr

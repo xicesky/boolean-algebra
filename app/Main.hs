@@ -20,8 +20,7 @@ demo ex = do
     putStr "Original    : "; pslBE ex
     putStr "Simplified  : "; pslBE $ simplifyPrimitive ex
     putStr "Intermediate: "; pslBE $ aggregateConjDisj' $ pushNegations' $ simplifyPrimitive ex
-    --putStr "CNF         : "; pslBE $ toCNF ex
-    --putStr "CNF-Data    : "; putStrLn $ show $ toCNFData ex
+    putStr "CNF         : "; pslBE $ toCNF ex
 
 main :: IO ()
 main = do
