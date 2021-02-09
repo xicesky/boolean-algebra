@@ -1,6 +1,6 @@
 
 -- Utility module for Template Haskell usage in other boolean-algebra modules
-module THUtil 
+module BooleanAlgebra.THUtil 
     ( deriveOpts
     , deriveDefault
     , deriveLiftSum

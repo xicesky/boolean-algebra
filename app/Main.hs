@@ -1,6 +1,6 @@
 module Main where
 
-import BooleanAlgebra
+import BooleanAlgebra.Base
 
 {- Notes & interesting reads:
     https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
