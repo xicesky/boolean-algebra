@@ -3,8 +3,6 @@ cabal-version: 1.12
 -- This file has been generated from package.yaml by hpack version 0.34.3.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 2e15f53eea92c7b6b664b20e163e592401b462496b42c655407221bd3f45bcfa
 
 name:           boolean-algebra
 version:        0.1.0.0
@@ -31,12 +29,14 @@ library
       ConstrainedMonadic
       Nondeterminism
       RecursionSchemes
+      THUtil
   other-modules:
       Paths_boolean_algebra
   hs-source-dirs:
       src
   build-depends:
       base >=4.7 && <5
+    , compdata
     , containers
     , data-fix
     , deriving-compat
@@ -54,6 +54,7 @@ executable boolean-algebra-exe
   build-depends:
       base >=4.7 && <5
     , boolean-algebra
+    , compdata
     , containers
     , data-fix
     , deriving-compat
@@ -72,6 +73,7 @@ test-suite boolean-algebra-test
   build-depends:
       base >=4.7 && <5
     , boolean-algebra
+    , compdata
     , containers
     , data-fix
     , deriving-compat

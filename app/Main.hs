@@ -12,15 +12,16 @@ Inspiration for solver:
     http://hackage.haskell.org/package/cflp
 -}
 
-pslBE :: Show vn => BooleanExpr vn -> IO ()
-pslBE = putStrLn . simplePretty
+pslBE :: PrettyAlmostBool a => a -> IO ()
+pslBE = putStrLn . prettyBool
 
-demo :: Show vn => BooleanExpr vn -> IO ()
+demo :: BooleanExpr -> IO ()
 demo ex = do
     putStr "Original    : "; pslBE ex
     putStr "Simplified  : "; pslBE $ simplifyPrimitive ex
-    putStr "CNF         : "; pslBE $ toCNF ex
-    putStr "CNF-Data    : "; putStrLn $ show $ toCNFData ex
+    putStr "Intermediate: "; pslBE $ aggregateConjDisj' $ pushNegations' $ simplifyPrimitive ex
+    --putStr "CNF         : "; pslBE $ toCNF ex
+    --putStr "CNF-Data    : "; putStrLn $ show $ toCNFData ex
 
 main :: IO ()
 main = do

@@ -39,7 +39,10 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-# extra-deps: []
+extra-deps:
+  - compdata-0.12.1@sha256:bcacccfb0e44c6950c3e1d73edfcc0d3b836109b367c40a02d674f3173b3d8a9,13243
+  - tree-view-0.5@sha256:85fbc67b53c1ef47f020a69051e6a29b27481698fe802cd2ed8ab0108aa69a38,1231
+
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

@@ -24,6 +24,7 @@ dependencies:
 - data-fix
 - mtl
 - transformers
+- compdata
 - deriving-compat
 - containers
 
