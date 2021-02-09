@@ -25,8 +25,11 @@ source-repository head
 
 library
   exposed-modules:
+      BooleanAlgebra.Aggregate
       BooleanAlgebra.Base
+      BooleanAlgebra.CNF
       BooleanAlgebra.Ideas
+      BooleanAlgebra.Simplify
       BooleanAlgebra.THUtil
       ConstrainedMonadic
       Nondeterminism

@@ -1,6 +1,9 @@
 module Main where
 
 import BooleanAlgebra.Base
+import BooleanAlgebra.Simplify
+import BooleanAlgebra.Aggregate
+import BooleanAlgebra.CNF
 
 {- Notes & interesting reads:
     https://en.wikipedia.org/wiki/Satisfiability_modulo_theories

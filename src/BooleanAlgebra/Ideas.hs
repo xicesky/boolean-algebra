@@ -10,6 +10,9 @@
 {-# LANGUAGE TemplateHaskell        #-}
 {-# LANGUAGE TypeOperators          #-}
 
+-- Considering advanced extensions
+{-# LANGUAGE TypeFamilies           #-}
+
 module BooleanAlgebra.Ideas where
 
 import Data.Comp.Term
