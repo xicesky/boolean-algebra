@@ -20,6 +20,7 @@ import Data.Comp.Ops
 
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
+import BooleanAlgebra.Pretty
 
 {-----------------------------------------------------------------------------}
 -- Extended boolean functions

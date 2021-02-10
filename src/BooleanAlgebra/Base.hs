@@ -43,6 +43,7 @@ import BooleanAlgebra.THUtil
 -- Thinking
 
 {-----------------------------------------------------------------------------}
+-- Basic boolean expressions
 
 -- Boolean Values
 data BooleanValue e = BTrue | BFalse
@@ -97,71 +98,79 @@ type BooleanExpr = Term BooleanBaseF
 
 -- Show instance for BooleanExpr already exists in Data.Comp.Show!
 
-{-----------------------------------------------------------------------------}
--- "Pretty" printer
--- uses unicode symbols, but doesn't generate valid haskell expressions
--- Src: https://en.wikipedia.org/wiki/List_of_logic_symbols
-
-{- TODO:
-    Use https://hackage.haskell.org/package/prettyprinter-1.2.0.1#readme
--}
-
-class Functor f => PrettyBool f where
-    -- showsPrec for our pretty printer
-    prettyPrintBoolAlg :: Alg f (Int -> ShowS)
-
--- Lift prettyPrintBoolAlg over sums of functors
-$(deriveLiftSum [''PrettyBool])
-
-instance PrettyBool BooleanValue where
-    prettyPrintBoolAlg :: BooleanValue (Int -> ShowS) -> Int -> ShowS
-    prettyPrintBoolAlg BTrue _ = showString "⊤"
-    prettyPrintBoolAlg BFalse _ = showString "⊥"
-
-instance PrettyBool BooleanVariable where
-    prettyPrintBoolAlg :: BooleanVariable (Int -> ShowS) -> Int -> ShowS
-    prettyPrintBoolAlg (BVariable s) _ = showString s
-
-instance PrettyBool BooleanNot where
-    prettyPrintBoolAlg :: BooleanNot (Int -> ShowS) -> Int -> ShowS
-    prettyPrintBoolAlg (BNot e) d = showParen (d > prec) $
-        showString "¬" . e (prec+1)
-        where prec = 10
-
-instance PrettyBool BooleanAnd where
-    prettyPrintBoolAlg :: BooleanAnd (Int -> ShowS) -> Int -> ShowS
-    prettyPrintBoolAlg (BAnd a b) d = showParen (d > prec) $
-        a (prec+1) . showString "∧" . b (prec+1)
-        where prec = 6
-
-instance PrettyBool BooleanOr where
-    prettyPrintBoolAlg :: BooleanOr (Int -> ShowS) -> Int -> ShowS
-    prettyPrintBoolAlg (BOr a b) d = showParen (d > prec) $
-        a (prec+1) . showString "∨" . b (prec+1)
-        where prec = 3
-
 exampleExpr01 :: BooleanExpr
 exampleExpr01 = (iBNot (iBVar "x" `iBAnd` iBVar "y")) `iBAnd` iBVar "z"
 
--- Class for other types, related to boolean expressions
--- (like BooleanExprSimp below)
-class PrettyAlmostBool a where
-    prettyPrintAB :: a -> Int -> ShowS
+{-----------------------------------------------------------------------------}
+-- Simplified form
+-- without literal values (True, False)
 
--- All our normal terms are pretty-printable
-instance PrettyBool e => PrettyAlmostBool (Term e) where
-    prettyPrintAB :: Term e -> Int -> ShowS
-    prettyPrintAB = cata prettyPrintBoolAlg
+-- BooleanExprF without BooleanValue
+type BooleanExprSimpF
+    =   BooleanVariable
+    :+: BooleanNot
+    :+: BooleanAnd
+    :+: BooleanOr
 
--- Non-recursive terms can be pretty-printed for any param type
-instance PrettyAlmostBool (BooleanValue a) where
-    prettyPrintAB :: BooleanValue a -> Int -> ShowS
-    prettyPrintAB = prettyPrintBoolAlg . fmap undefined
+-- Simplified boolean expressions are either just "true" or "false"
+-- or terms without any boolean values
+type BooleanExprSimp = Either (BooleanValue ()) (Term BooleanExprSimpF)
 
--- Non-recursive terms can be pretty-printed for any param type
-instance PrettyAlmostBool (BooleanVariable a) where
-    prettyPrintAB :: BooleanVariable a -> Int -> ShowS
-    prettyPrintAB = prettyPrintBoolAlg . fmap undefined
+{-----------------------------------------------------------------------------}
+-- Boolean "literal" form
+-- Literal = Variable + optional Negation
 
-prettyBool :: PrettyAlmostBool a => a -> String
-prettyBool e = prettyPrintAB e 0 ""
+data BooleanLit e = BooleanLit Bool String
+    deriving (Show, Eq, Functor)
+    {- NOTE: For this construction deriveDefault apparently
+    can't work out Show and Eq -}
+
+$(deriveDefault [''BooleanLit] )
+
+-- Shorthands
+iPos :: (BooleanLit :<: f) => String -> Cxt h f a
+iPos = iBooleanLit True
+
+iNeg :: (BooleanLit :<: f) => String -> Cxt h f a
+iNeg = iBooleanLit False
+
+-- BooleanExpr without BooleanValue, BooleanVariable, BooleanNot
+--  but using BooleanLit
+type BooleanExprLitF
+    =   BooleanLit
+    :+: BooleanAnd
+    :+: BooleanOr
+
+type BooleanExprLit = Term BooleanExprLitF
+
+{-----------------------------------------------------------------------------}
+-- Aggregate form
+
+{- BooleanCD: Conjunction over Disjunctions
+    BooleanCD [[a,b],[c,d]] ≅ (a ∨ b) ∧ (c ∨ d)
+-}
+data BooleanCD e = BooleanCD [[e]]
+    --deriving Functor
+    deriving (Show, Eq, Functor)
+
+-- Don't derive ShowF for BooleanCD, see bug description in Aggregate.hs
+$(deriveNoShow [''BooleanCD])
+
+-- BooleanExprLit where BooleanCD replaces (BooleanAnd, BooleanOr)
+type BooleanExprCDLitF
+    =   BooleanLit
+    :+: BooleanCD
+
+type BooleanExprCDLit = Term BooleanExprCDLitF
+
+{-----------------------------------------------------------------------------}
+-- Conjunctive normal form (CNF)
+
+type CNF = BooleanCD (BooleanLit ())
+
+-- Shorthands
+lPos :: String -> BooleanLit a
+lPos = BooleanLit True
+
+lNeg :: String -> BooleanLit a
+lNeg = BooleanLit False

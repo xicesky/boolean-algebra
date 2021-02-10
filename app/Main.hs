@@ -1,6 +1,7 @@
 module Main where
 
 import BooleanAlgebra.Base
+import BooleanAlgebra.Pretty
 import BooleanAlgebra.Simplify
 import BooleanAlgebra.Aggregate
 import BooleanAlgebra.CNF

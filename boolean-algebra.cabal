@@ -29,6 +29,7 @@ library
       BooleanAlgebra.Base
       BooleanAlgebra.CNF
       BooleanAlgebra.Ideas
+      BooleanAlgebra.Pretty
       BooleanAlgebra.Simplify
       BooleanAlgebra.THUtil
       ConstrainedMonadic

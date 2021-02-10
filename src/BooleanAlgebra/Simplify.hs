@@ -25,32 +25,15 @@ import Data.Comp.Derive
 import Data.Comp.Show ()            -- for the Show instance
 import Data.Comp.Equality ()        -- for the Eq instance
 
-import Data.Bool (bool)
-
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
+import BooleanAlgebra.Pretty
 
 {-----------------------------------------------------------------------------}
 -- Simplifier   (Step 1 of toCNF)
 
--- BooleanExprF without BooleanValue
-type BooleanExprSimpF
-    =   BooleanVariable
-    :+: BooleanNot
-    :+: BooleanAnd
-    :+: BooleanOr
-
--- Simplified boolean expressions are either just "true" or "false"
--- or terms without any boolean values
-type BooleanExprSimp = Either (BooleanValue ()) (Term BooleanExprSimpF)
-
--- Pretty-printable
--- actually all instances with "Either a b" are pretty-printable, if both a and b are.
--- We see the "Either" instance as "untagged" because we assume that a and b are disjunct.
-instance (PrettyAlmostBool a, PrettyAlmostBool b) => PrettyAlmostBool (Either a b) where
-    prettyPrintAB :: Either a b -> Int -> ShowS
-    prettyPrintAB (Left v) = prettyPrintAB v
-    prettyPrintAB (Right e) = prettyPrintAB e
+exampleExpr02 :: BooleanExpr
+exampleExpr02 = iBNot ((iBNot iBTrue) `iBAnd` (iBNot iBFalse))
 
 {- simpBool pushes boolean values outwards
     and mostly eliminates them.
@@ -102,50 +85,14 @@ simplifyPrimitive = cata simpBool
 -- but this is a hack.
 -- If you can, use fmap instead:
 --      fmap :: (a -> b) -> Either x a -> Either x b
+-- TODO: remove
 hackSimp :: BooleanExprSimp -> Term BooleanExprSimpF
 hackSimp (Right expr) = expr
 hackSimp otherwise = error $ "hackSimp() failed, expression is " ++ show otherwise
 
-exampleExpr02 :: BooleanExpr
-exampleExpr02 = iBNot ((iBNot iBTrue) `iBAnd` (iBNot iBFalse))
-
 {-----------------------------------------------------------------------------}
 -- Boolean literals     (Step 2 of toCNF)
 -- Literal = Variable + optional Negation
-
-data BooleanLit e = BooleanLit Bool String
-    deriving (Show, Eq, Functor)
-    {- NOTE: For this construction deriveDefault apparently
-    can't work out Show and Eq -}
-
-$(deriveDefault [''BooleanLit] )
-
--- Shorthands
-iPos :: (BooleanLit :<: f) => String -> Cxt h f a
-iPos = iBooleanLit True
-
-iNeg :: (BooleanLit :<: f) => String -> Cxt h f a
-iNeg = iBooleanLit False
-
--- Let's also pretty-print it
-instance PrettyBool BooleanLit where
-    prettyPrintBoolAlg :: BooleanLit (Int -> ShowS) -> Int -> ShowS
-    prettyPrintBoolAlg (BooleanLit positive s) _
-        = (bool (showString "¬") id positive) . (showString s)
-
--- Non-recursive terms can be pretty-printed for any param type
-instance PrettyAlmostBool (BooleanLit a) where
-    prettyPrintAB :: BooleanLit a -> Int -> ShowS
-    prettyPrintAB = prettyPrintBoolAlg . fmap undefined
-
--- BooleanExpr without BooleanValue, BooleanVariable, BooleanNot
---  but using BooleanLit
-type BooleanExprLitF
-    =   BooleanLit
-    :+: BooleanAnd
-    :+: BooleanOr
-
-type BooleanExprLit = Term BooleanExprLitF
 
 -- pushNeg eliminates negations by pushing them inwards
 -- and turning variables into literals

@@ -25,11 +25,9 @@ import Data.Comp.Derive
 import Data.Comp.Show ()            -- for the Show instance
 import Data.Comp.Equality ()        -- for the Eq instance
 
-import Data.List (intersperse)
-import Control.Monad (join)
-
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
+import BooleanAlgebra.Pretty
 import BooleanAlgebra.Simplify
 
 {-----------------------------------------------------------------------------}
@@ -45,12 +43,16 @@ Repeated disjunctions are aggregated into lists (using associativity)
     Disj [] = False
 -}
 
-{- BooleanCD: Conjunction over Disjunctions
-    BooleanCD [[a,b],[c,d]] ≅ (a ∨ b) ∧ (c ∨ d)
--}
-data BooleanCD e = BooleanCD [[e]]
-    --deriving Functor
-    deriving (Show, Eq, Functor)
+-- This will result in a single (non-nested) CD
+exampleExpr03 :: BooleanExpr
+exampleExpr03 = (iBVar "a" `iBOr` iBVar "b") `iBAnd` (iBVar "c" `iBOr` iBVar "d")
+
+-- This will result in nested CDs, bc. of disjunctions over conjunctions
+exampleExpr04 :: BooleanExpr
+exampleExpr04 = (iBVar "a" `iBAnd` iBVar "b") `iBOr` (iBVar "c" `iBAnd` iBVar "d")
+
+-- exampleExprCD :: BooleanExprCDLit
+-- exampleExprCD = iBooleanCD [ [ iPos "a", iNeg "b" ], [ iNeg "c", iPos "d" ] ]
 
 {- TODO: Fix bugs in compdata
 
@@ -77,19 +79,6 @@ Bug #2:
 
 -}
 
-$(deriveNoShow [''BooleanCD])
-
--- Utility function: Concatenate a list of ShowS using a seperator
-ccShowList :: String -> String -> String -> [ShowS] -> ShowS
-ccShowList begin sep end list = let
-    sList = foldr (.) id $ intersperse (showString sep) list
-    in showString begin . sList . showString end
-
--- Copied over from Data.Comp.Derive.Show
-showCon :: String -> [String] -> String
-showCon con [] = con
-showCon con args = "(" ++ con ++ " " ++ unwords args ++ ")"
-
 -- Custom instance of ShowF - workaround for a bug in compdata
 instance ShowF BooleanCD where
     showF (BooleanCD xs) = let
@@ -98,40 +87,6 @@ instance ShowF BooleanCD where
         strCDs :: ShowS
         strCDs = ccList . fmap (ccList . fmap (++)) $ xs
         in (showCon "BooleanCD") [strCDs ""]
-
-{- Utility function:
-Concatenate lists of precedence-dependent arguments with an operator
--}
-ccListOp :: (Int, String) -> (Int -> ShowS) -> [Int -> ShowS] -> Int -> ShowS
-ccListOp _          empty []    = empty
-ccListOp _          _     [e]   = e
-ccListOp (prec, op) _     es    = \d -> let
-    listOfShowS :: [ShowS]
-    listOfShowS = fmap ($ prec+1) es
-    in showParen (d > prec) $ ccShowList "" op "" listOfShowS
-
--- Pretty-printer for BooleanCD
-instance PrettyBool BooleanCD where
-    prettyPrintBoolAlg :: BooleanCD (Int -> ShowS) -> Int -> ShowS
-    prettyPrintBoolAlg (BooleanCD cds) d
-        = showCDs cds d where
-            showDisjs :: [Int -> ShowS] -> Int -> ShowS
-            showDisjs = ccListOp (3, "∨") empty where
-                empty = prettyPrintAB BFalse
-
-            showConjs :: [Int -> ShowS] -> Int -> ShowS
-            showConjs = ccListOp (6, "∧") empty where
-                empty = prettyPrintAB BTrue
-
-            showCDs :: [[Int -> ShowS]] -> Int -> ShowS
-            showCDs = showConjs . fmap showDisjs
-
--- BooleanExprLit where BooleanCD replaces (BooleanAnd, BooleanOr)
-type BooleanExprCDLitF
-    =   BooleanLit
-    :+: BooleanCD
-
-type BooleanExprCDLit = Term BooleanExprCDLitF
 
 -- unCDLit gives us a guaranteed CD term
 unCDLit :: BooleanExprCDLit -> BooleanCD BooleanExprCDLit
@@ -183,14 +138,3 @@ aggregateConjDisj' :: Either (BooleanValue ()) BooleanExprLit -> BooleanExprCDLi
 aggregateConjDisj' (Left BTrue) = iBooleanCD []
 aggregateConjDisj' (Left BFalse) = iBooleanCD [[]]  -- TODO: this should be a function, also BVal -> Boolean
 aggregateConjDisj' (Right e) = aggregateConjDisj e
-
--- exampleExprCD :: BooleanExprCDLit
--- exampleExprCD = iBooleanCD [ [ iPos "a", iNeg "b" ], [ iNeg "c", iPos "d" ] ]
-
--- This will result in a single (non-nested) CD
-exampleExpr03 :: BooleanExpr
-exampleExpr03 = (iBVar "a" `iBOr` iBVar "b") `iBAnd` (iBVar "c" `iBOr` iBVar "d")
-
--- This will result in nested CDs, bc. of disjunctions over conjunctions
-exampleExpr04 :: BooleanExpr
-exampleExpr04 = (iBVar "a" `iBAnd` iBVar "b") `iBOr` (iBVar "c" `iBAnd` iBVar "d")

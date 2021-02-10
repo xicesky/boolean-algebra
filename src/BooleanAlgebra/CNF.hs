@@ -28,6 +28,7 @@ import Control.Monad (join)
 
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
+import BooleanAlgebra.Pretty
 import BooleanAlgebra.Simplify
 import BooleanAlgebra.Aggregate
 
@@ -36,14 +37,8 @@ import BooleanAlgebra.Aggregate
 -- Distributes disjunctions over conjunctions:
 --      a ∨ (b ∧ c) = (a ∨ b) ∧ (a ∨ c)
 
-type CNF = BooleanCD (BooleanLit ())
-
--- Shorthands
-lPos :: String -> BooleanLit a
-lPos = BooleanLit True
-
-lNeg :: String -> BooleanLit a
-lNeg = BooleanLit False
+exampleExpr05 :: BooleanExpr
+exampleExpr05 = iBNot $ ((iBNot $ iBVar "a") `iBOr` iBVar "b") `iBAnd` (iBNot $ iBVar "c" `iBAnd` iBVar "d")
 
 -- Pretty-printer for CNF
 -- Idea: Maybe print each disjunktion on a seperate line
@@ -101,7 +96,3 @@ exampleCNF = BooleanCD [ [ lPos "a", lNeg "b" ], [ lNeg "c", lPos "d" ] ]
 
 toCNF :: BooleanExpr -> CNF
 toCNF = distributeToCNF . aggregateConjDisj' . pushNegations' . simplifyPrimitive
-
--- Test it on this, e.g.: pushOr $ pushNeg $ exampleExpr05
-exampleExpr05 :: BooleanExpr
-exampleExpr05 = iBNot $ ((iBNot $ iBVar "a") `iBOr` iBVar "b") `iBAnd` (iBNot $ iBVar "c" `iBAnd` iBVar "d")
