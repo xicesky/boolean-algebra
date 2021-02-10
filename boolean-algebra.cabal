@@ -32,6 +32,8 @@ library
       BooleanAlgebra.Pretty
       BooleanAlgebra.Simplify
       BooleanAlgebra.THUtil
+      CompdataBi
+      CompdataBiMulti
       ConstrainedMonadic
       Nondeterminism
       RecursionSchemes
