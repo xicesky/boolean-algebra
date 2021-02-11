@@ -35,6 +35,7 @@ library
       CompdataBi
       CompdataBiMulti
       ConstrainedMonadic
+      CustomCompData
       Nondeterminism
       RecursionSchemes
   other-modules:
