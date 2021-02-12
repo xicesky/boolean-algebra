@@ -50,7 +50,7 @@ data BooleanValue e = BTrue | BFalse
     deriving (Show, Functor)
 
 -- Variables
-data BooleanVariable e = BVariable String   -- BIG YIKES! FIXME!
+data BooleanVariable e = BVariable String   -- BIG YIKES! FIXME: Need to rewrite compdata
     deriving Functor
 
 -- Boolean negation
