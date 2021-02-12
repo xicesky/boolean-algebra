@@ -35,6 +35,11 @@ library
       CompdataBi
       CompdataBiMulti
       ConstrainedMonadic
+      Container.Container
+      Container.Definition
+      Container.Indexed.Definition
+      Container.Instances
+      Container.Util.Profunctor
       CustomCompData
       Nondeterminism
       RecursionSchemes
