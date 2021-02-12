@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeOperators          #-}
 {-# LANGUAGE UndecidableInstances   #-}
 {-# LANGUAGE PolyKinds              #-}
-{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE RankNTypes             #-}
 
 -- And some more flexibility
 {-# LANGUAGE MultiParamTypeClasses  #-}
