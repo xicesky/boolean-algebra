@@ -17,6 +17,7 @@ module BooleanAlgebra.Ideas where
 
 import Data.Comp.Term
 import Data.Comp.Ops
+import Data.Comp.Render
 
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
@@ -64,6 +65,8 @@ instance PrettyBool BooleanExtOp where
     prettyPrintBoolAlg (BooleanExtOp op a b) d = showParen (d > prec) $
         a (prec+1) . showString (bExtOpSymbol op) . b (prec+1)
         where prec = 9
+
+instance Render BooleanExtOp
 
 -- TODO: desugar
 

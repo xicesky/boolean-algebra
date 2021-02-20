@@ -17,15 +17,12 @@ Inspiration for solver:
     http://hackage.haskell.org/package/cflp
 -}
 
-pslBE :: PrettyAlmostBool a => a -> IO ()
-pslBE = putStrLn . prettyBool
-
 demo :: BooleanExpr -> IO ()
 demo ex = do
-    putStr "Original    : "; pslBE ex
-    putStr "Simplified  : "; pslBE $ simplifyPrimitive ex
-    putStr "Intermediate: "; pslBE $ aggregateConjDisj' $ pushNegations' $ simplifyPrimitive ex
-    putStr "CNF         : "; pslBE $ toCNF ex
+    putStr "Original    : "; printBool ex
+    putStr "Simplified  : "; printBool $ simplifyPrimitive ex
+    putStr "Intermediate: "; printBool $ aggregateConjDisj' $ pushNegations' $ simplifyPrimitive ex
+    putStr "CNF         : "; printBool $ toCNF ex
 
 main :: IO ()
 main = do
@@ -37,3 +34,7 @@ main = do
 
     demo exampleExpr05
     putStrLn ""
+
+    -- And just to show off a tree view
+    putStrLn "Expression as tree:"
+    drawBool exampleExpr05

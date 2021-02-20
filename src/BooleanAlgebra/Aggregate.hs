@@ -22,8 +22,8 @@ import Data.Comp.Algebra
 
 import Data.Comp.Derive
 --import Data.Comp.Derive.Show
-import Data.Comp.Show ()            -- for the Show instance
-import Data.Comp.Equality ()        -- for the Eq instance
+--import Data.Comp.Show ()            -- for the Show instance
+--import Data.Comp.Equality ()        -- for the Eq instance
 
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
@@ -53,40 +53,6 @@ exampleExpr04 = (iBVar "a" `iBAnd` iBVar "b") `iBOr` (iBVar "c" `iBAnd` iBVar "d
 
 -- exampleExprCD :: BooleanExprCDLit
 -- exampleExprCD = iBooleanCD [ [ iPos "a", iNeg "b" ], [ iNeg "c", iPos "d" ] ]
-
-{- TODO: Fix bugs in compdata
-
-Bug #1:
-    show-ing terms of BooleanCD is wrong and puts quotes where none belong:
-        putStrLn $ show exampleExpr03
-        (BooleanCD [["(BooleanLit True \"a\")","(BooleanLit False \"b\")"],["(BooleanLit False \"c\")","(BooleanLit True \"d\")"]])
-    
-    Data.Comp.Derive.Show handles arguments this way:
-        mkShow :: (Bool, ExpQ) -> ExpQ
-        mkShow (isFArg, var)
-            | isFArg = var
-            | otherwise = [| show $var |]
-    Apparently [[e]] is not a functor argument - this can lead to other bugs!
-
-    This one will be hard to get right, but should accept nested functors:
-        data Meh e = Meh e          deriving Functor
-        data Muh e = Muh (Meh e)    deriving Functor
-
-Bug #2:
-    compdata should use showsPrec instead of show
-    1. Performance (maybe not that relevant, ghc rewrites a lot of that stuff)
-    2. Precedence is important, don't put parens everywhere
-
--}
-
--- Custom instance of ShowF - workaround for a bug in compdata
-instance ShowF BooleanCD where
-    showF (BooleanCD xs) = let
-        ccList :: [ShowS] -> ShowS
-        ccList = ccShowList "[" ", " "]"
-        strCDs :: ShowS
-        strCDs = ccList . fmap (ccList . fmap (++)) $ xs
-        in (showCon "BooleanCD") [strCDs ""]
 
 -- unCDLit gives us a guaranteed CD term
 unCDLit :: BooleanExprCDLit -> BooleanCD BooleanExprCDLit

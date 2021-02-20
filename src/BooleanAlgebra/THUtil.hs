@@ -21,6 +21,7 @@ deriveOpts =
     , makeFoldable
     , makeEqF
     , makeShowF
+    , makeShowConstr
     , smartConstructors
     --, smartAConstructors
     ]
@@ -36,6 +37,7 @@ deriveNoShow = derive [ makeTraversable
     , makeFoldable
     , makeEqF
     -- , makeShowF
+    -- , makeShowConstr
     , smartConstructors
     --, smartAConstructors
     ]
@@ -45,6 +47,7 @@ deriveDebug = derive [ makeTraversable
     -- , makeFoldable
     , makeEqF
     -- , makeShowF
+    -- , makeShowConstr
     -- , smartConstructors
     --, smartAConstructors
     ]

@@ -19,11 +19,13 @@ import Data.Comp.Algebra
     (   Alg, Coalg, RAlg, RCoalg
     ,   cata, ana, para, apo
     )
+import Data.Comp.Render (Render(..), stringTree)
 
 import Data.Comp.Derive
 --import Data.Comp.Derive.Show
-import Data.Comp.Show ()            -- for the Show instance
-import Data.Comp.Equality ()        -- for the Eq instance
+
+import Data.Tree (Tree(..))
+import Data.Tree.View (showTree)
 
 import Data.Bool (bool)
 import Data.List (intersperse)
@@ -40,7 +42,7 @@ import BooleanAlgebra.Base
     Use https://hackage.haskell.org/package/prettyprinter-1.2.0.1#readme
 -}
 
-class Functor f => PrettyBool f where
+class (Functor f, Render f) => PrettyBool f where
     -- showsPrec for our pretty printer
     prettyPrintBoolAlg :: Alg f (Int -> ShowS)
 
@@ -51,9 +53,16 @@ $(deriveLiftSum [''PrettyBool])
 -- (like BooleanExprSimp below)
 class PrettyAlmostBool a where
     prettyPrintAB :: a -> Int -> ShowS
+    prettyTree :: a -> Tree String
 
 prettyBool :: PrettyAlmostBool a => a -> String
 prettyBool e = prettyPrintAB e 0 ""
+
+printBool :: PrettyAlmostBool a => a -> IO ()
+printBool = putStrLn . prettyBool
+
+drawBool :: PrettyAlmostBool a => a -> IO ()
+drawBool = putStrLn . showTree . prettyTree
 
 {-----------------------------------------------------------------------------}
 -- Utilities
@@ -89,9 +98,13 @@ instance PrettyBool BooleanValue where
     prettyPrintBoolAlg BTrue _ = showString "⊤"
     prettyPrintBoolAlg BFalse _ = showString "⊥"
 
+instance Render BooleanValue
+
 instance PrettyBool BooleanVariable where
     prettyPrintBoolAlg :: BooleanVariable (Int -> ShowS) -> Int -> ShowS
     prettyPrintBoolAlg (BVariable s) _ = showString s
+
+instance Render BooleanVariable
 
 instance PrettyBool BooleanNot where
     prettyPrintBoolAlg :: BooleanNot (Int -> ShowS) -> Int -> ShowS
@@ -99,11 +112,15 @@ instance PrettyBool BooleanNot where
         showString "¬" . e (prec+1)
         where prec = 10
 
+instance Render BooleanNot
+
 instance PrettyBool BooleanAnd where
     prettyPrintBoolAlg :: BooleanAnd (Int -> ShowS) -> Int -> ShowS
     prettyPrintBoolAlg (BAnd a b) d = showParen (d > prec) $
         a (prec+1) . showString "∧" . b (prec+1)
         where prec = 6
+
+instance Render BooleanAnd
 
 instance PrettyBool BooleanOr where
     prettyPrintBoolAlg :: BooleanOr (Int -> ShowS) -> Int -> ShowS
@@ -111,20 +128,26 @@ instance PrettyBool BooleanOr where
         a (prec+1) . showString "∨" . b (prec+1)
         where prec = 3
 
+instance Render BooleanOr
+
 -- All our normal terms are pretty-printable
 instance PrettyBool e => PrettyAlmostBool (Term e) where
     prettyPrintAB :: Term e -> Int -> ShowS
     prettyPrintAB = cata prettyPrintBoolAlg
+    prettyTree :: Term e -> Tree String
+    prettyTree = stringTree
 
 -- Non-recursive terms can be pretty-printed for any param type
 instance PrettyAlmostBool (BooleanValue a) where
     prettyPrintAB :: BooleanValue a -> Int -> ShowS
     prettyPrintAB = prettyPrintBoolAlg . fmap undefined
+    prettyTree = stringTreeAlg . fmap undefined
 
 -- Non-recursive terms can be pretty-printed for any param type
 instance PrettyAlmostBool (BooleanVariable a) where
     prettyPrintAB :: BooleanVariable a -> Int -> ShowS
     prettyPrintAB = prettyPrintBoolAlg . fmap undefined
+    prettyTree = stringTreeAlg . fmap undefined
 
 {-----------------------------------------------------------------------------}
 -- Instances for simplified expressions
@@ -136,6 +159,8 @@ instance (PrettyAlmostBool a, PrettyAlmostBool b) => PrettyAlmostBool (Either a 
     prettyPrintAB :: Either a b -> Int -> ShowS
     prettyPrintAB (Left v) = prettyPrintAB v
     prettyPrintAB (Right e) = prettyPrintAB e
+    prettyTree (Left v ) = Node "Left"  $ [prettyTree v]
+    prettyTree (Right e) = Node "Right" $ [prettyTree e]
 
 {-----------------------------------------------------------------------------}
 -- Instances for boolean literals
@@ -145,13 +170,56 @@ instance PrettyBool BooleanLit where
     prettyPrintBoolAlg (BooleanLit positive s) _
         = (bool (showString "¬") id positive) . (showString s)
 
+instance Render BooleanLit
+
 -- Non-recursive terms can be pretty-printed for any param type
 instance PrettyAlmostBool (BooleanLit a) where
     prettyPrintAB :: BooleanLit a -> Int -> ShowS
     prettyPrintAB = prettyPrintBoolAlg . fmap undefined
+    prettyTree = stringTreeAlg . fmap undefined
 
 {-----------------------------------------------------------------------------}
 -- Instances for aggregate form
+
+{- TODO: Fix bugs in compdata
+
+Bug #1:
+    show-ing terms of BooleanCD is wrong and puts quotes where none belong:
+        putStrLn $ show exampleExpr03
+        (BooleanCD [["(BooleanLit True \"a\")","(BooleanLit False \"b\")"],["(BooleanLit False \"c\")","(BooleanLit True \"d\")"]])
+    
+    Data.Comp.Derive.Show handles arguments this way:
+        mkShow :: (Bool, ExpQ) -> ExpQ
+        mkShow (isFArg, var)
+            | isFArg = var
+            | otherwise = [| show $var |]
+    Apparently [[e]] is not a functor argument - this can lead to other bugs!
+
+    This one will be hard to get right, but should accept nested functors:
+        data Meh e = Meh e          deriving Functor
+        data Muh e = Muh (Meh e)    deriving Functor
+
+Bug #2:
+    compdata should use showsPrec instead of show
+    1. Performance (maybe not that relevant, ghc rewrites a lot of that stuff)
+    2. Precedence is important, don't put parens everywhere
+
+-}
+
+-- Custom instance of ShowF - workaround for a bug in compdata
+instance ShowF BooleanCD where
+    showF (BooleanCD xs) = let
+        ccList :: [ShowS] -> ShowS
+        ccList = ccShowList "[" ", " "]"
+        strCDs :: ShowS
+        strCDs = ccList . fmap (ccList . fmap (++)) $ xs
+        in (showCon "BooleanCD") [strCDs ""]
+
+-- Custom instance of ShowConstr
+-- FIXME: not pretty, due to the defintion of ShowConstr
+instance ShowConstr BooleanCD where
+    showConstr :: BooleanCD a -> String
+    showConstr _ = "BooleanCD []"
 
 -- Pretty-printer for BooleanCD
 instance PrettyBool BooleanCD where
@@ -169,6 +237,14 @@ instance PrettyBool BooleanCD where
             showCDs :: [[Int -> ShowS]] -> Int -> ShowS
             showCDs = showConjs . fmap showDisjs
 
+instance Render BooleanCD
+
 {-----------------------------------------------------------------------------}
 -- Instances for CNF
 
+-- Pretty-printer for CNF
+-- Idea: Maybe print each disjunction on a seperate line
+instance PrettyAlmostBool a => PrettyAlmostBool (BooleanCD a) where
+    prettyPrintAB :: BooleanCD a -> Int -> ShowS
+    prettyPrintAB = prettyPrintBoolAlg . fmap prettyPrintAB
+    prettyTree = stringTreeAlg . fmap prettyTree

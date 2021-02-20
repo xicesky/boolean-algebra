@@ -40,12 +40,6 @@ import BooleanAlgebra.Aggregate
 exampleExpr05 :: BooleanExpr
 exampleExpr05 = iBNot $ ((iBNot $ iBVar "a") `iBOr` iBVar "b") `iBAnd` (iBNot $ iBVar "c" `iBAnd` iBVar "d")
 
--- Pretty-printer for CNF
--- Idea: Maybe print each disjunktion on a seperate line
-instance PrettyAlmostBool a => PrettyAlmostBool (BooleanCD a) where
-    prettyPrintAB :: BooleanCD a -> Int -> ShowS
-    prettyPrintAB = prettyPrintBoolAlg . fmap prettyPrintAB where
-
 -- a ∨ (x0 ∧ x1 ∧ ...) = (a ∨ x0) ∧ (a ∨ x1) ∧ ...
 distrLit :: BooleanLit a -> [[BooleanLit a]] -> [[BooleanLit a]]
 distrLit a xs = fmap (a :) xs
