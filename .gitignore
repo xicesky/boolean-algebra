@@ -1,11 +1,18 @@
 # Ignore stack build dir
 .stack-work/
 
-# Ignore unixoid backups
+# Ignore the usual temporaries / backups / swapfiles...
 *~
+*.sw[pon]
+*.bak
+.DS_Store
 
 # Ignore our dummy dir (used for examples and ad-hoc code)
-/dummy
+/local
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
 
 # The following are from https://github.com/github/gitignore/blob/master/Haskell.gitignore
 dist
