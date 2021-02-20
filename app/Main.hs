@@ -10,6 +10,7 @@ import BooleanAlgebra.CNF
     https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
     https://en.wikipedia.org/wiki/Constraint_satisfaction_problem
     https://curry.pages.ps.informatik.uni-kiel.de/curry-lang.org/
+    http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.34.4164&rep=rep1&type=pdf
 
 Inspiration for solver:
     https://www-ps.informatik.uni-kiel.de/~sebf/data/pub/atps09.pdf

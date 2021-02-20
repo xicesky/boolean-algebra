@@ -35,12 +35,9 @@ library
       CompdataBi
       CompdataBiMulti
       ConstrainedMonadic
-      Container.Container
-      Container.Definition
-      Container.Indexed.Definition
-      Container.Instances
-      Container.Util.Profunctor
       CustomCompData
+      Experiment
+      Experiment2
       Nondeterminism
       RecursionSchemes
   other-modules:
@@ -54,7 +51,9 @@ library
     , data-fix
     , deriving-compat
     , mtl
+    , sky-utils
     , transformers
+    , unordered-containers
   default-language: Haskell2010
 
 executable boolean-algebra-exe
@@ -72,7 +71,9 @@ executable boolean-algebra-exe
     , data-fix
     , deriving-compat
     , mtl
+    , sky-utils
     , transformers
+    , unordered-containers
   default-language: Haskell2010
 
 test-suite boolean-algebra-test
@@ -91,5 +92,7 @@ test-suite boolean-algebra-test
     , data-fix
     , deriving-compat
     , mtl
+    , sky-utils
     , transformers
+    , unordered-containers
   default-language: Haskell2010

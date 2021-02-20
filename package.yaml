@@ -27,6 +27,8 @@ dependencies:
 - compdata
 - deriving-compat
 - containers
+- unordered-containers
+- sky-utils
 
 library:
   source-dirs: src

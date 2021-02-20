@@ -18,6 +18,17 @@ packages:
       sha256: d9a18211606d72c340943d0a23fc119e94561f81fa4be118764c8288d259aeff
   original:
     hackage: tree-view-0.5@sha256:85fbc67b53c1ef47f020a69051e6a29b27481698fe802cd2ed8ab0108aa69a38,1231
+- completed:
+    name: sky-utils
+    version: 0.2.0.0
+    git: /Users/markus/Dev/haskell/sky-utils
+    pantry-tree:
+      size: 1087
+      sha256: ec53488c15449c4b5094c4403dfeee1be741c1a9901b4392d76964eb9e4ae329
+    commit: ee048faae3a41675ab56d90661de21f633131701
+  original:
+    git: /Users/markus/Dev/haskell/sky-utils
+    commit: ee048faae3a41675ab56d90661de21f633131701
 snapshots:
 - completed:
     size: 563100

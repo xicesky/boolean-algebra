@@ -42,13 +42,17 @@ packages:
 extra-deps:
   - compdata-0.12.1@sha256:bcacccfb0e44c6950c3e1d73edfcc0d3b836109b367c40a02d674f3173b3d8a9,13243
   - tree-view-0.5@sha256:85fbc67b53c1ef47f020a69051e6a29b27481698fe802cd2ed8ab0108aa69a38,1231
-
+  - git: /Users/markus/Dev/haskell/sky-utils
+    commit: ee048faae3a41675ab56d90661de21f633131701
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
 
 # Extra package databases containing global packages
 # extra-package-dbs: []
+
+ghc-options:
+  "$everything": -haddock
 
 # Control whether we use the GHC we find on the path
 # system-ghc: true
