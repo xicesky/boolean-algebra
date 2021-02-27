@@ -40,9 +40,12 @@ variableNames = fmap varName . subterms'
 -- Variable substitution
 
 {- | A substitution from constructors in f to terms of g.
-    Wrapped in a newtype to avoid issues with impredicative polymorphism.
-    You can think of it as:
-    >>> type Subst m f g = forall a. f a -> m (Context g a)
+
+Wrapped in a newtype to avoid issues with impredicative polymorphism.
+
+You can think of it as:
+
+> type Subst m f g = forall a. f a -> m (Context g a)
 -}
 newtype Subst m f g = Subst (HomM m f g)
 
@@ -53,9 +56,10 @@ type VarSubstM g m = ReaderT (Subst m BooleanVariable g) m
 liftHom :: Monad m => Hom f g -> HomM m f g
 liftHom hom = return . hom
 
-{- | substVars replaces occurances of @BooleanVariable@ by another term t.
+{- | Class of terms in which variables can be substituted
 -}
 class (Traversable f, Functor g) => SubstVar f g where
+    -- Replaces occurances of 'BooleanVariable' by another term t.
     substVarAlg :: Monad m => AlgM (VarSubstM g m) f (Term g)
     -- :: f (Term g) -> VarSubstM g m (Term g)
 
@@ -77,10 +81,14 @@ instance (Functor g) => SubstVar BooleanVariable g where
             (gtg :: Context g (Term g)) <- lift $ hom fs
             return $ appCxt gtg
 
+-- | Monadic variable substitution catamorphism.
 substVarM :: forall m f g. (Monad m, SubstVar f g)
     => HomM m BooleanVariable g -> Term f -> m (Term g)
 substVarM hom f = runReaderT (cataM substVarAlg f) (Subst hom)
 
+-- | Variable substitution catamorphism.
+--
+-- Non-monadic version of 'substVarM'
 substVar :: forall f g. SubstVar f g
     => Hom BooleanVariable g -> Term f -> Term g
 substVar hom f = runIdentity $ substVarM (liftHom hom) f
@@ -88,14 +96,16 @@ substVar hom f = runIdentity $ substVarM (liftHom hom) f
 {-----------------------------------------------------------------------------}
 -- Substitute variables using replacements from a map
 
--- | Flexible monadic version
-substituteM :: forall g m map.
-    ( Functor g, Monad m
+-- | Substitute variables using replacements from a map.
+--
+-- Flexible monadic version
+substituteM :: forall f g m map.
+    ( Traversable f, Functor g, Monad m
     , MapLike map, (String, Term g) ~ ElemT map     -- Keys are Strings, Values are Terms
-    , SubstVar BooleanBaseF g
+    , SubstVar f g
     ) => map                                        -- Maps names to new terms
     -> (forall a. String -> m (Context g a))        -- Action on unmapped variables
-    -> Term BooleanBaseF                            -- Term to transform
+    -> Term f                                       -- Term to transform
     -> m (Term g)
 substituteM map err = substVarM hom where
     hom :: BooleanVariable a -> m (Context g a)
@@ -103,21 +113,28 @@ substituteM map err = substVarM hom where
         Just expr   -> return $ toCxt expr
         Nothing     -> err s
 
--- | Partial substitution (leaves unmapped variables in place)
-substituteM' :: forall m map.
-    ( Monad m
-    , MapLike map, (String, Term BooleanBaseF) ~ ElemT map
-    , SubstVar BooleanBaseF BooleanBaseF
+-- | Substitute variables using replacements from a map.
+--
+-- Partial substitution (leaves unmapped variables in place)
+substituteM' :: forall f m map.
+    ( Traversable f, Monad m
+    , MapLike map, (String, Term f) ~ ElemT map
+    , SubstVar f f
+    , BooleanVariable :<: f
     ) => map
-    -> Term BooleanBaseF
-    -> m (Term BooleanBaseF)
+    -> Term f
+    -> m (Term f)
 substituteM' map = substituteM map (return . iBVar)
 
--- | Non-monadic version of substituteM'
-substitute' :: forall map.
-    ( MapLike map, (String, Term BooleanBaseF) ~ ElemT map -- Keys are Strings, Values are Terms
-    , SubstVar BooleanBaseF BooleanBaseF
-    ) => map                                        -- Maps names to new terms
-    -> Term BooleanBaseF                            -- Term to transform
-    -> Term BooleanBaseF
+-- | Substitute variables using replacements from a map.
+--
+-- Non-monadic version of 'substituteM''
+substitute' :: forall f map.
+    ( Traversable f
+    , MapLike map, (String, Term f) ~ ElemT map
+    , SubstVar f f
+    , BooleanVariable :<: f
+    ) => map
+    -> Term f
+    -> Term f
 substitute' map = runIdentity . substituteM' map
