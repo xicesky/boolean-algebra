@@ -32,7 +32,6 @@ library
       BooleanAlgebra.Pretty
       BooleanAlgebra.Simplify
       BooleanAlgebra.THUtil
-      BooleanAlgebra.Util.CompdataUtils
       BooleanAlgebra.Variable
       ConstrainedMonadic
       CustomCompData
