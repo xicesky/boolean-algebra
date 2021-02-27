@@ -12,8 +12,12 @@
 
 module BooleanAlgebra.Examples where
 
+import Control.Monad.Except
+
 import Data.Comp.Term
 import Data.Comp.Ops
+
+import Container
 
 import BooleanAlgebra.Base
 import BooleanAlgebra.Variable
@@ -85,5 +89,36 @@ exampleSubst02 :: BooleanExpr -> BooleanExprNoVars
 exampleSubst02 = substVar hom where
     hom :: BooleanVariable a -> Context BooleanBaseNoVarsF a
     hom (BVariable s) = iBTrue
+
+{- | Replace variables with another term from an environment (map)
+    >>> printBool $ exampleSubst03 $ exampleExpr05
+    >>> printBool $ simplify $ exampleSubst03 $ exampleExpr05
+-}
+exampleSubst03 :: BooleanExpr -> BooleanExpr
+exampleSubst03 = substitute' env where
+    env :: HashMap String BooleanExpr
+    env = fromList
+        [   ("a",   iBNot (iBVar "a")   )
+        ,   ("c",   iBFalse             )
+        ]
+
+{- | Eliminate variables by substituting values
+    >>> printBool $ exampleSubst04 $ exampleExpr05
+    >>> printBool $ simplify $ exampleSubst04 $ exampleExpr05
+-}
+exampleSubst04 :: BooleanExpr -> BooleanExprNoVars
+exampleSubst04 term = let
+    env :: HashMap String BooleanExprNoVars
+    env = fromList
+        [   ("a",   iBTrue              )
+        ,   ("b",   iBFalse             )
+        ,   ("c",   iBFalse             )
+        ,   ("d",   iBFalse             )
+        ]
+    err :: String -> Except String (Context g a)
+    err s = throwError $ "Unmapped variable " ++ s
+    in case runExcept $ substituteM env err term of
+        Left message -> error message       -- Well, this just an example
+        Right term -> term
 
 {-----------------------------------------------------------------------------}
