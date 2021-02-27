@@ -30,7 +30,6 @@ import Data.Comp.Generic (subterms')
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
 import BooleanAlgebra.Pretty
-import BooleanAlgebra.Util.CompdataUtils
 
 -- Fetch the names of all the variables
 variableNames :: forall f. (Foldable f, BooleanVariable :<: f) =>
@@ -40,7 +39,37 @@ variableNames = fmap varName . subterms'
 {-----------------------------------------------------------------------------}
 -- Variable substitution
 
+-- TODO: Monadic version will come in handy!
+
+newtype Subst f g = Subst (Hom f g)
+
 {- | substVars replaces occurances of @BooleanVariable@ by another term t.
-    Note: This looks a little bit like desugaring, and can be specialized to
-    specific variables.
 -}
+class (Functor f, Functor g) => SubstVar f g where
+    substVarAlg :: Alg f (Subst BooleanVariable g -> Term g)
+
+-- FIXME: I don't like overlappable instances
+-- But there is no way to avoid them here
+
+instance {-# OVERLAPPABLE #-} (SubstVar f h, SubstVar g h) => SubstVar (f :+: g) h where
+    substVarAlg = caseF substVarAlg substVarAlg
+
+-- The "default" instance. We can avoid overlappable here
+instance {-# OVERLAPPABLE #-} (Functor f, Functor g, f :<: g) => SubstVar f g where
+    substVarAlg fs subst = Term . inj . fmap ($ subst) $ fs
+
+-- The specialized instance for variables
+instance (Functor g) => SubstVar BooleanVariable g where
+    substVarAlg bv (Subst (hom :: Hom BooleanVariable g))
+        = appCxt . hom . fmap undefined $ bv
+    -- FIXME: replace "fmap undefined" by varIsConst :: ∀a b. BooleanVariable a -> BooleanVariable b
+
+substVar :: forall f g. SubstVar f g
+    => Hom BooleanVariable g -> Term f -> Term g
+substVar hom f = cata substVarAlg f (Subst hom)
+
+-- Renames variables
+exampleSubst :: BooleanExpr -> BooleanExpr
+exampleSubst = substVar hom where
+    hom :: BooleanVariable a -> Context BooleanBaseF a
+    hom (BVariable s) = iBVar $ 'z' : s

@@ -77,3 +77,16 @@ substSome onF = let
     pass :: forall b. (Functor g) => g b -> Context (f :+: g) b
     pass = deepInject . idHom
     in appHom $ caseF onFHom pass
+
+{- Another thing that can't work with compdata:
+    here the variable g should be inferred, but there are ambiguous
+    variables all inbetween.
+-}
+-- substVars :: forall f g a. (Functor f, Functor g, f :=: BooleanVariable :+: g)
+--     => (BooleanVariable a -> Context f a) -> CxtFun f f
+-- substVars fVar = let
+--     nothing :: g a -> Context f a
+--     nothing = _
+--     both :: f a -> Context f a
+--     both = spl fVar nothing
+--     in appHom both
