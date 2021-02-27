@@ -28,7 +28,6 @@ import Control.Monad (join)
 
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
-import BooleanAlgebra.Pretty
 import BooleanAlgebra.Simplify
 import BooleanAlgebra.Aggregate
 

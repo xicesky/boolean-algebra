@@ -27,7 +27,6 @@ import Data.Comp.Derive
 
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
-import BooleanAlgebra.Pretty
 import BooleanAlgebra.Simplify
 
 {-----------------------------------------------------------------------------}

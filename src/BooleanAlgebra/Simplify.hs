@@ -27,7 +27,6 @@ import Data.Comp.Equality ()        -- for the Eq instance
 
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
-import BooleanAlgebra.Pretty
 
 {-----------------------------------------------------------------------------}
 -- Simplifier   (Step 1 of toCNF)
@@ -87,8 +86,8 @@ simplifyPrimitive = cata simpBool
 --      fmap :: (a -> b) -> Either x a -> Either x b
 -- TODO: remove
 hackSimp :: BooleanExprSimp -> Term BooleanExprSimpF
-hackSimp (Right expr) = expr
-hackSimp otherwise = error $ "hackSimp() failed, expression is " ++ show otherwise
+hackSimp (Right expr)   = expr
+hackSimp _              = error $ "hackSimp failed, expression is " ++ show otherwise
 
 {-----------------------------------------------------------------------------}
 -- Boolean literals     (Step 2 of toCNF)
