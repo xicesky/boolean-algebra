@@ -5,6 +5,7 @@ import BooleanAlgebra.Pretty
 import BooleanAlgebra.Simplify
 import BooleanAlgebra.Aggregate
 import BooleanAlgebra.CNF
+import BooleanAlgebra.Examples
 
 {- Notes & interesting reads:
     https://en.wikipedia.org/wiki/Satisfiability_modulo_theories

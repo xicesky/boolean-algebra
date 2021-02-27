@@ -31,9 +31,6 @@ import BooleanAlgebra.Base
 {-----------------------------------------------------------------------------}
 -- Simplifier   (Step 1 of toCNF)
 
-exampleExpr02 :: BooleanExpr
-exampleExpr02 = iBNot ((iBNot iBTrue) `iBAnd` (iBNot iBFalse))
-
 {- simpBool pushes boolean values outwards
     and mostly eliminates them.
     If any values BTrue/BFalse remain, they are the
@@ -47,8 +44,8 @@ $(deriveLiftSum [''SimpBool])
 
 instance SimpBool BooleanValue where
     simpBool :: BooleanValue BooleanExprSimp -> BooleanExprSimp
-    simpBool (BTrue)    = Left BTrue
-    simpBool (BFalse)   = Left BFalse
+    simpBool BTrue      = Left BTrue
+    simpBool BFalse     = Left BFalse
 
 instance SimpBool BooleanVariable where
     simpBool :: BooleanVariable BooleanExprSimp -> BooleanExprSimp
@@ -77,17 +74,8 @@ instance SimpBool BooleanOr where
     simpBool (BOr e (Left BFalse))  = e
     simpBool (BOr (Right a) (Right b)) = Right $ iBOr a b
 
-simplifyPrimitive :: BooleanExpr -> BooleanExprSimp
+simplifyPrimitive :: SimpBool f => Term f -> BooleanExprSimp
 simplifyPrimitive = cata simpBool
-
--- It is very annoying to have to deal with the "Either" part
--- but this is a hack.
--- If you can, use fmap instead:
---      fmap :: (a -> b) -> Either x a -> Either x b
--- TODO: remove
-hackSimp :: BooleanExprSimp -> Term BooleanExprSimpF
-hackSimp (Right expr)   = expr
-hackSimp _              = error $ "hackSimp failed, expression is " ++ show otherwise
 
 {-----------------------------------------------------------------------------}
 -- Boolean literals     (Step 2 of toCNF)
@@ -120,13 +108,12 @@ instance PushNeg BooleanOr where
     pushNeg (BOr a b) True  = iBOr (a True) (b True)
 
 -- Idea: PushNeg can operate on extended operation (see below)
-
-pushNegations :: Term BooleanExprSimpF -> BooleanExprLit
+pushNegations :: PushNeg f => Term f -> BooleanExprLit
 pushNegations e = cata pushNeg e True
 
 -- We usually want to apply it to BooleanExprSimp directly
 -- usage e.g.: prettyBool $ pushNegations' $ simplifyPrimitive $ exampleExpr05
-pushNegations' :: BooleanExprSimp -> Either (BooleanValue ()) BooleanExprLit
+pushNegations' :: PushNeg f => MaybeTrivial f -> MaybeTrivial BooleanExprLitF
 pushNegations' = fmap pushNegations
 
 {- TODO:
@@ -139,3 +126,9 @@ for free
 
 TODO: Function to turn literals back into BooleanVariable :+: BooleanNot
 -}
+
+{-----------------------------------------------------------------------------}
+-- Complete simplification step
+
+simplify :: SimpBool f => Term f -> MaybeTrivial BooleanExprLitF
+simplify = pushNegations' . simplifyPrimitive

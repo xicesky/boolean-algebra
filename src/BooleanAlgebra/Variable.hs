@@ -29,7 +29,6 @@ import Data.Comp.Generic (subterms')
 
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
-import BooleanAlgebra.Pretty
 
 -- Fetch the names of all the variables
 variableNames :: forall f. (Foldable f, BooleanVariable :<: f) =>
@@ -67,9 +66,3 @@ instance (Functor g) => SubstVar BooleanVariable g where
 substVar :: forall f g. SubstVar f g
     => Hom BooleanVariable g -> Term f -> Term g
 substVar hom f = cata substVarAlg f (Subst hom)
-
--- Renames variables
-exampleSubst :: BooleanExpr -> BooleanExpr
-exampleSubst = substVar hom where
-    hom :: BooleanVariable a -> Context BooleanBaseF a
-    hom (BVariable s) = iBVar $ 'z' : s

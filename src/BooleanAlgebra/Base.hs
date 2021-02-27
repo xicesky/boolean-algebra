@@ -23,6 +23,8 @@ module BooleanAlgebra.Base where
         http://www.cs.nott.ac.uk/~pszgmh/alacarte.pdf
 -}
 
+import Data.Void
+
 --import Data.Comp
 import Data.Comp.Term
 import Data.Comp.Ops
@@ -107,8 +109,8 @@ type BooleanExpr = Term BooleanBaseF
 
 -- Show instance for BooleanExpr already exists in Data.Comp.Show!
 
-exampleExpr01 :: BooleanExpr
-exampleExpr01 = iBNot (iBVar "x" `iBAnd` iBVar "y") `iBAnd` iBVar "z"
+-- The type of "just boolean values"
+type JustBooleanValue = BooleanValue Void
 
 {-----------------------------------------------------------------------------}
 -- Simplified form
@@ -121,9 +123,12 @@ type BooleanExprSimpF
     :+: BooleanAnd
     :+: BooleanOr
 
+-- Modifier for terms so they can hold trivial values (True, False)
+type MaybeTrivial f = Either JustBooleanValue (Term f)
+
 -- Simplified boolean expressions are either just "true" or "false"
 -- or terms without any boolean values
-type BooleanExprSimp = Either (BooleanValue ()) (Term BooleanExprSimpF)
+type BooleanExprSimp = MaybeTrivial BooleanExprSimpF
 
 {-----------------------------------------------------------------------------}
 -- Boolean "literal" form

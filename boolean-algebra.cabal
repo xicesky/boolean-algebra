@@ -28,6 +28,7 @@ library
       BooleanAlgebra.Aggregate
       BooleanAlgebra.Base
       BooleanAlgebra.CNF
+      BooleanAlgebra.Examples
       BooleanAlgebra.Ideas
       BooleanAlgebra.Pretty
       BooleanAlgebra.Simplify

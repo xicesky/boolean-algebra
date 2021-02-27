@@ -42,17 +42,6 @@ Repeated disjunctions are aggregated into lists (using associativity)
     Disj [] = False
 -}
 
--- This will result in a single (non-nested) CD
-exampleExpr03 :: BooleanExpr
-exampleExpr03 = (iBVar "a" `iBOr` iBVar "b") `iBAnd` (iBVar "c" `iBOr` iBVar "d")
-
--- This will result in nested CDs, bc. of disjunctions over conjunctions
-exampleExpr04 :: BooleanExpr
-exampleExpr04 = (iBVar "a" `iBAnd` iBVar "b") `iBOr` (iBVar "c" `iBAnd` iBVar "d")
-
--- exampleExprCD :: BooleanExprCDLit
--- exampleExprCD = iBooleanCD [ [ iPos "a", iNeg "b" ], [ iNeg "c", iPos "d" ] ]
-
 -- unCDLit gives us a guaranteed CD term
 unCDLit :: BooleanExprCDLit -> BooleanCD BooleanExprCDLit
 unCDLit = split unCD unLit where
@@ -95,11 +84,11 @@ instance AggregateCD BooleanOr where
             _ -> iBooleanCD [[cda, cdb]]
 
 -- This is the actual aggregation function, using a catamorphism
-aggregateConjDisj :: BooleanExprLit -> BooleanExprCDLit
-aggregateConjDisj e = cata aggregateCD e
+aggregateConjDisj :: AggregateCD f => Term f -> BooleanExprCDLit
+aggregateConjDisj = cata aggregateCD
 
 -- Tiny helper for our old "Either" problem
-aggregateConjDisj' :: Either (BooleanValue ()) BooleanExprLit -> BooleanExprCDLit
+aggregateConjDisj' :: AggregateCD f => MaybeTrivial f -> BooleanExprCDLit
 aggregateConjDisj' (Left BTrue) = iBooleanCD []
 aggregateConjDisj' (Left BFalse) = iBooleanCD [[]]  -- TODO: this should be a function, also BVal -> Boolean
 aggregateConjDisj' (Right e) = aggregateConjDisj e
