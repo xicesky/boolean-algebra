@@ -27,6 +27,7 @@ library
   exposed-modules:
       BooleanAlgebra.Aggregate
       BooleanAlgebra.Base
+      BooleanAlgebra.Class
       BooleanAlgebra.CNF
       BooleanAlgebra.Examples
       BooleanAlgebra.Ideas
@@ -36,6 +37,7 @@ library
       BooleanAlgebra.Variable
       ConstrainedMonadic
       CustomCompData
+      Gen
       Nondeterminism
   other-modules:
       Paths_boolean_algebra

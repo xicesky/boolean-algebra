@@ -237,7 +237,11 @@ instance PrettyBool BooleanCD where
             showCDs :: [[Int -> ShowS]] -> Int -> ShowS
             showCDs = showConjs . fmap showDisjs
 
-instance Render BooleanCD
+-- Special instance, BooleanCD is just "a little different"
+instance Render BooleanCD where
+    stringTreeAlg :: Alg BooleanCD (Tree String)
+    stringTreeAlg (BooleanCD xs) = Node "Conjunction" $
+        fmap (Node "Disjunction") xs
 
 {-----------------------------------------------------------------------------}
 -- Instances for CNF

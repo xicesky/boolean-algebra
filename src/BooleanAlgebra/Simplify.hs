@@ -113,7 +113,7 @@ pushNegations e = cata pushNeg e True
 
 -- We usually want to apply it to BooleanExprSimp directly
 -- usage e.g.: prettyBool $ pushNegations' $ simplifyPrimitive $ exampleExpr05
-pushNegations' :: PushNeg f => MaybeTrivial f -> MaybeTrivial BooleanExprLitF
+pushNegations' :: PushNeg f => MaybeTrivial (Term f) -> MaybeTrivial (Term BooleanExprLitF)
 pushNegations' = fmap pushNegations
 
 {- TODO:
@@ -130,5 +130,5 @@ TODO: Function to turn literals back into BooleanVariable :+: BooleanNot
 {-----------------------------------------------------------------------------}
 -- Complete simplification step
 
-simplify :: SimpBool f => Term f -> MaybeTrivial BooleanExprLitF
+simplify :: SimpBool f => Term f -> MaybeTrivial (Term BooleanExprLitF)
 simplify = pushNegations' . simplifyPrimitive

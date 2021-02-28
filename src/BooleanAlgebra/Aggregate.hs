@@ -88,7 +88,7 @@ aggregateConjDisj :: AggregateCD f => Term f -> BooleanExprCDLit
 aggregateConjDisj = cata aggregateCD
 
 -- Tiny helper for our old "Either" problem
-aggregateConjDisj' :: AggregateCD f => MaybeTrivial f -> BooleanExprCDLit
+aggregateConjDisj' :: AggregateCD f => MaybeTrivial (Term f) -> BooleanExprCDLit
 aggregateConjDisj' (Left BTrue) = iBooleanCD []
 aggregateConjDisj' (Left BFalse) = iBooleanCD [[]]  -- TODO: this should be a function, also BVal -> Boolean
 aggregateConjDisj' (Right e) = aggregateConjDisj e

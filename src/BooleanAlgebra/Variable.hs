@@ -138,3 +138,9 @@ substitute' :: forall f map.
     -> Term f
     -> Term f
 substitute' map = runIdentity . substituteM' map
+
+{-----------------------------------------------------------------------------}
+
+
+{-----------------------------------------------------------------------------}
+-- Idea: compare terms for α-Equivalence

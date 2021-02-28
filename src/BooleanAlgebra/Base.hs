@@ -40,6 +40,8 @@ import Data.Comp.Show ()            -- for the Show instance
 import Data.Comp.Equality ()        -- for the Eq instance
 
 import BooleanAlgebra.THUtil
+import BooleanAlgebra.Class
+import qualified BooleanAlgebra.Class as B
 
 {-----------------------------------------------------------------------------}
 -- Annotations for HLint
@@ -107,10 +109,21 @@ type BooleanBaseF
 -- use ⊤, ⊥, ¬, ∧, ∨ and variables
 type BooleanExpr = Term BooleanBaseF
 
--- Show instance for BooleanExpr already exists in Data.Comp.Show!
+instance Boolean BooleanExpr where
+    and = iBAnd
+    or = iBOr
+    not = iBNot
 
--- The type of "just boolean values"
-type JustBooleanValue = BooleanValue Void
+instance BooleanAlgebra BooleanExpr where
+    var = iBVar
+
+instance Boolean (BooleanValue a) where
+    and BTrue  x = x
+    and BFalse _ = BFalse
+    or  BTrue  _ = BTrue
+    or  BFalse x = x
+    not BTrue    = BTrue
+    not BFalse   = BFalse
 
 {-----------------------------------------------------------------------------}
 -- Simplified form
@@ -123,12 +136,39 @@ type BooleanExprSimpF
     :+: BooleanAnd
     :+: BooleanOr
 
+-- The type of "just boolean values"
+type JustBooleanValue = BooleanValue Void
+
 -- Modifier for terms so they can hold trivial values (True, False)
-type MaybeTrivial f = Either JustBooleanValue (Term f)
+type MaybeTrivial f = Either JustBooleanValue f
 
 -- Simplified boolean expressions are either just "true" or "false"
 -- or terms without any boolean values
-type BooleanExprSimp = MaybeTrivial BooleanExprSimpF
+type BooleanExprSimp = MaybeTrivial (Term BooleanExprSimpF)
+
+instance Boolean (Term BooleanExprSimpF) where
+    and = iBAnd
+    or = iBOr
+    not = iBNot
+
+instance BooleanAlgebra (Term BooleanExprSimpF) where
+    var = iBVar
+
+instance Boolean BooleanExprSimp where
+    and (Left x) (Left y)       = Left $ x `B.and` y
+    and (Right x) (Right y)     = Right $ x `B.and` y
+    and (Left BTrue) (Right y)  = Right y
+    and (Left BFalse) (Right _) = Left BFalse
+    and (Right x) left          = B.and left (Right x)
+
+    or  (Left x) (Left y)       = Left $ x `B.or` y
+    or  (Right x) (Right y)     = Right $ x `B.or` y
+    or  (Left BTrue) (Right _)  = Left BTrue
+    or  (Left BFalse) (Right y) = Right y
+    or  (Right x) left          = B.or left (Right x)
+    
+    not (Left x)                = Left $ B.not x
+    not (Right x)               = Right $ B.not x
 
 {-----------------------------------------------------------------------------}
 -- Boolean "literal" form
