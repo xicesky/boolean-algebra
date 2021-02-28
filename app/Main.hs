@@ -1,5 +1,7 @@
 module Main where
 
+import Criterion.Main
+
 import BooleanAlgebra.Base
 import BooleanAlgebra.Pretty
 import BooleanAlgebra.Simplify
@@ -25,8 +27,8 @@ demo ex = do
     putStr "Intermediate: "; printBool $ aggregateConjDisj' $ pushNegations' $ simplifyPrimitive ex
     putStr "CNF         : "; printBool $ toCNF ex
 
-main :: IO ()
-main = do
+standardDemo :: IO ()
+standardDemo = do
     -- pslBE exampleExpr01
     -- pslBE exampleExpr02
     -- pslBE (simplifyPrimitive exampleExpr02)
@@ -39,3 +41,17 @@ main = do
     -- And just to show off a tree view
     putStrLn "Expression as tree:"
     drawBool exampleExpr05
+
+main :: IO ()
+main = standardDemo
+
+-- TODO: Use criterion for benchmarks.
+
+-- defaultMain [
+--     bgroup "fib"
+--         [ bench "1"  $ whnf fib 1
+--         , bench "5"  $ whnf fib 5
+--         , bench "9"  $ whnf fib 9
+--         , bench "11" $ whnf fib 11
+--         ]
+--     ]

@@ -24,6 +24,7 @@ dependencies:
 - data-fix
 - mtl
 - transformers
+- criterion
 - compdata
 - tree-view
 - deriving-compat

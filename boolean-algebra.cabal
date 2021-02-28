@@ -47,6 +47,7 @@ library
       base >=4.7 && <5
     , compdata
     , containers
+    , criterion
     , data-fix
     , deriving-compat
     , mtl
@@ -68,6 +69,7 @@ executable boolean-algebra-exe
     , boolean-algebra
     , compdata
     , containers
+    , criterion
     , data-fix
     , deriving-compat
     , mtl
@@ -90,6 +92,7 @@ test-suite boolean-algebra-test
     , boolean-algebra
     , compdata
     , containers
+    , criterion
     , data-fix
     , deriving-compat
     , mtl

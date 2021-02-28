@@ -14,6 +14,9 @@
 *.sublime-project
 *.sublime-workspace
 
+# Generated files
+/benchmark-report.html
+
 # The following are from https://github.com/github/gitignore/blob/master/Haskell.gitignore
 dist
 dist-*
