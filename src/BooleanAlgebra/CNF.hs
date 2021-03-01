@@ -64,3 +64,28 @@ distributeToCNF = cata distributeDoC
 
 toCNF :: SimpBool f => Term f -> CNF
 toCNF = distributeToCNF . aggregateConjDisj' . simplify
+
+{-----------------------------------------------------------------------------}
+-- Stats of CNF clauses
+
+data CNFStats = CNFStats
+    {   nClauses :: Int
+    ,   minClauseLength :: Int
+    ,   maxClauseLength :: Int
+    ,   averageClauseLength :: Float
+    }
+    deriving (Show, Eq)
+
+-- | Collect some statistics of a CNF representation.
+-- Does not work on the empty CNF!
+cnfStats :: CNF -> CNFStats
+cnfStats (Conjunction xs) = CNFStats
+    {   nClauses = length xs
+    ,   minClauseLength = minimum clens
+    ,   maxClauseLength = maximum clens
+    ,   averageClauseLength = average clens
+    } where
+    clens :: [Int]
+    clens = fmap length xs
+    average :: (Real a, Fractional b) => [a] -> b
+    average xs = realToFrac (sum xs) / realToFrac (length xs)

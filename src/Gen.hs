@@ -36,7 +36,15 @@ Obviously:
 >>> (a => !b) == (!a || !b) = (!a <= b)
 -}
 excludes :: Boolean b => b -> b -> b
-excludes a b = (not a) || (not b)
+excludes a b = not a || not b
+
+-- | Implication (Material conditional)
+implies :: Boolean b => b -> b -> b
+implies a b = not a || b
+
+-- | If and only if (Material biconditional)
+iff :: Boolean b => b -> b -> b
+iff a b = (a `implies` b) && (b `implies` a)
 
 -- This variant actually generates CNF
 -- TODO: Eliminate duplicate clauses (symmetry of `excludes`)
@@ -51,7 +59,10 @@ existsUnique s p = foldr1 and
 
 -- This variant is nice and short, but generates irregular terms
 -- (which make a nice test)
---existsUnique' :: Boolean b => 
+existsUnique' :: (Eq a, BooleanAlgebra b) => Boolean b => [a] -> (a -> b) -> b
+existsUnique' s p = exists s $ \x ->
+    forAll s $ \y ->
+    p y `iff` (x `is` (== y))
 
 {-----------------------------------------------------------------------------}
 -- Pre-defined rules and quantifiers: Hacks
@@ -77,6 +88,14 @@ neatExample01 = forAll [1..9] $ (`is` odd) || (`is` even)
 
 neatExample02 :: forall b. BooleanAlgebra b => b
 neatExample02 = exists [1..9] $ not (`is` odd)
+
+chooseInt01 :: forall b. BooleanAlgebra b => b
+chooseInt01 = existsUnique [1..3] (\x -> var $ "N" ++ show x)
+
+-- !!! @toCNF (chooseInt02 :: BooleanExpr)@ generates 729 clauses á 7 literals
+-- (at least with the "stupid" simplifier)
+chooseInt02 :: forall b. BooleanAlgebra b => b
+chooseInt02 = existsUnique' [1..3] (\x -> var $ "N" ++ show x)
 
 sortList :: forall b. BooleanAlgebra b => b
 sortList = let
