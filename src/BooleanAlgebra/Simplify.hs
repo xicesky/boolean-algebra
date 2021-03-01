@@ -38,7 +38,7 @@ instance SimpBool BooleanValue where
 
 instance SimpBool BooleanVariable where
     simpBool :: BooleanVariable BooleanExprSimp -> BooleanExprSimp
-    simpBool = Right . inject . fmap undefined
+    simpBool = Right . inject . constmap
     -- simpBool (BVariable v)  = Right $ iBVar v
 
 instance SimpBool BooleanNot where

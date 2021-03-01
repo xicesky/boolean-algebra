@@ -272,7 +272,7 @@ type CNF = Conjunction (Disjunction (BooleanLit Void))
 
 -- And another little shortcut
 cnfFromList :: [[BooleanLit a]] -> CNF
-cnfFromList = Conjunction . fmap (Disjunction . fmap undefined)
+cnfFromList = Conjunction . fmap (Disjunction . fmap constmap)
 
 {-----------------------------------------------------------------------------}
 -- Numbered variables

@@ -68,7 +68,7 @@ instance AggregateOps BooleanValue where
 
 instance AggregateOps BooleanLit where
     aggregateOps :: Alg BooleanLit (Flattened BooleanExprFlatLit)
-    aggregateOps lit = Other $ inject $ fmap undefined lit  -- FIXME undefined
+    aggregateOps = Other . inject . constmap
 
 -- FIXME: Remove
 type FlatStuff = Flattened BooleanExprFlatLit

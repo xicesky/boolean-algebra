@@ -45,7 +45,7 @@ $(deriveLiftSum [''DistributeDoC])
 
 instance DistributeDoC BooleanLit where
     distributeDoC :: BooleanLit CNF -> CNF
-    distributeDoC = pure . pure . fmap undefined
+    distributeDoC = pure . pure . constmap
 
 instance DistributeDoC Conjunction where
     distributeDoC :: Conjunction CNF -> CNF
