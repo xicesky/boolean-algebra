@@ -56,3 +56,6 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - boolean-algebra
+    - QuickCheck
+    - hspec
+    - quickcheck-instances

@@ -97,7 +97,7 @@ sortList :: forall b. BooleanAlgebra b => b
 sortList = let
     -- | The n-th number is at the position i in the sorted list
     isAt :: BooleanAlgebra b => Int -> Int -> b
-    isAt n i = var $ "vN" ++ show n ++ "P" ++ show i
+    isAt n i = var $ "N" ++ show n ++ "P" ++ show i
 
     -- | Three numbers, three indices
     ns :: [Int]
