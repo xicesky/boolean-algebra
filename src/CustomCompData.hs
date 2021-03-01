@@ -1,11 +1,13 @@
 
 {- Compdata version with multi-param kinds:
-    Given f :: * -> * -> * and g: * -> * ->
-    we get (f :+: g) :: * -> * -> *
+    Given f :: Type -> Type -> Type and g: Type -> Type ->
+    we get (f :+: g) :: Type -> Type -> Type
     with (f :+: g) v behaving like (f v :+: g v)
 -}
 
 module CustomCompData where
+
+import Data.Kind (Type)
 
 import Control.Applicative hiding (Const)
 import Control.Monad hiding (mapM, sequence)
@@ -112,7 +114,7 @@ type family OrDupl' (a :: Bool) (b :: [Pos]) :: Bool where
 {-----------------------------------------------------------------------------}
 -- Term
 
-data Cxt :: * -> (* -> * -> *) -> * -> * -> * where
+data Cxt :: Type -> (Type -> Type -> Type) -> Type -> Type -> Type where
     Term ::  f v (Cxt h f v a) -> Cxt h f v a
     Hole :: a -> Cxt Hole f v a
 
@@ -234,13 +236,13 @@ instance (Traversable(f v), Traversable (g v)) => Traversable ((f :+: g) v) wher
     sequence (Inl e) = Inl `liftM` sequence e
     sequence (Inr e) = Inr `liftM` sequence e
 
-type family Elem (f :: * -> * -> *) (g :: * -> * -> *) :: Emb where
+type family Elem (f :: Type -> Type -> Type) (g :: Type -> Type -> Type) :: Emb where
     Elem f f = Found Here
     Elem (f1 :+: f2) g =  Sum' (Elem f1 g) (Elem f2 g)
     Elem f (g1 :+: g2) = Choose (Elem f g1) (Elem f g2)
     Elem f g = NotFound
 
-class Subsume (e :: Emb) (f :: * -> * -> *) (g :: * -> * -> *) where
+class Subsume (e :: Emb) (f :: Type -> Type -> Type) (g :: Type -> Type -> Type) where
   inj'  :: Proxy e -> f v a -> g v a
   prj'  :: Proxy e -> g v a -> Maybe (f v a)
 

@@ -4,13 +4,14 @@
 
 module ConstrainedMonadic where
 
+import Data.Kind (Type)
 import Control.Applicative
 import Control.Monad
 import Control.Monad.State
 
 class MonadPlus (Solver cs) => CStore cs where
     type Constraint cs
-    type     Solver cs :: * -> *
+    type     Solver cs :: Type -> Type
 
     noConstraints :: cs
     assert        :: Constraint cs -> StateT cs (Solver cs) ()

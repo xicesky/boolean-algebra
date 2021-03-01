@@ -45,6 +45,7 @@ default-extensions:
 - InstanceSigs
 - KindSignatures
 - MultiParamTypeClasses
+- NoStarIsType
 - PolyKinds
 - RankNTypes
 - RankNTypes

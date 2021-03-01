@@ -44,7 +44,7 @@ library
       Paths_boolean_algebra
   hs-source-dirs:
       src
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleContexts FlexibleInstances GADTs InstanceSigs InstanceSigs KindSignatures MultiParamTypeClasses PolyKinds RankNTypes RankNTypes ScopedTypeVariables ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeFamilies TypeFamilies TypeOperators UndecidableInstances
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleContexts FlexibleInstances GADTs InstanceSigs InstanceSigs KindSignatures MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes RankNTypes ScopedTypeVariables ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeFamilies TypeFamilies TypeOperators UndecidableInstances
   build-depends:
       base >=4.7 && <5
     , compdata
@@ -65,7 +65,7 @@ executable boolean-algebra-exe
       Paths_boolean_algebra
   hs-source-dirs:
       app
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleContexts FlexibleInstances GADTs InstanceSigs InstanceSigs KindSignatures MultiParamTypeClasses PolyKinds RankNTypes RankNTypes ScopedTypeVariables ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeFamilies TypeFamilies TypeOperators UndecidableInstances
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleContexts FlexibleInstances GADTs InstanceSigs InstanceSigs KindSignatures MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes RankNTypes ScopedTypeVariables ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeFamilies TypeFamilies TypeOperators UndecidableInstances
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
@@ -90,7 +90,7 @@ test-suite boolean-algebra-test
       Paths_boolean_algebra
   hs-source-dirs:
       test
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleContexts FlexibleInstances GADTs InstanceSigs InstanceSigs KindSignatures MultiParamTypeClasses PolyKinds RankNTypes RankNTypes ScopedTypeVariables ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeFamilies TypeFamilies TypeOperators UndecidableInstances
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleContexts FlexibleInstances GADTs InstanceSigs InstanceSigs KindSignatures MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes RankNTypes ScopedTypeVariables ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeFamilies TypeFamilies TypeOperators UndecidableInstances
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
