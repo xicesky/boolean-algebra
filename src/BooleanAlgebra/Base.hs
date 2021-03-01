@@ -24,6 +24,7 @@ module BooleanAlgebra.Base where
 -}
 
 import Data.Void
+import Control.Applicative (Alternative(..))
 
 --import Data.Comp
 import Data.Comp.Term
@@ -182,11 +183,20 @@ data BooleanLit e = BooleanLit Bool String
 $(deriveDefault [''BooleanLit])
 
 -- Shorthands
+lPos :: String -> BooleanLit a
+lPos = BooleanLit True
+
+lNeg :: String -> BooleanLit a
+lNeg = BooleanLit False
+
 iPos :: (BooleanLit :<: f) => String -> Cxt h f a
 iPos = iBooleanLit True
 
 iNeg :: (BooleanLit :<: f) => String -> Cxt h f a
 iNeg = iBooleanLit False
+
+litName :: BooleanLit e -> String
+litName (BooleanLit _ n) = n
 
 -- BooleanExpr without BooleanValue, BooleanVariable, BooleanNot
 --  but using BooleanLit
@@ -200,34 +210,62 @@ type BooleanExprLit = Term BooleanExprLitF
 {-----------------------------------------------------------------------------}
 -- Aggregate form
 
-{- BooleanCD: Conjunction over Disjunctions
-    BooleanCD [[a,b],[c,d]] ≅ (a ∨ b) ∧ (c ∨ d)
--}
-data BooleanCD e = BooleanCD [[e]]
-    --deriving Functor
+-- | Boolean conjunctions of arbitrary length
+-- a.k.a. "flattened" and expressions
+data Conjunction e = Conjunction [e]
     deriving (Show, Eq, Functor)
 
--- Don't derive ShowF for BooleanCD, see bug description in Pretty.hs
-$(deriveNoShow [''BooleanCD])
+-- | Boolean disjunctions of arbitrary length
+-- a.k.a. "flattened" or expressions
+data Disjunction e = Disjunction [e]
+    deriving (Show, Eq, Functor)
 
--- BooleanExprLit where BooleanCD replaces (BooleanAnd, BooleanOr)
-type BooleanExprCDLitF
+-- Don't derive ShowF for aggregates, see bug description in Pretty.hs
+$(deriveNoShow [''Conjunction])
+$(deriveNoShow [''Disjunction])
+
+instance Applicative Conjunction where
+    pure = Conjunction . pure
+    (<*>) (Conjunction a) (Conjunction b)
+        = Conjunction (a <*> b)
+
+instance Alternative Conjunction where
+    empty = Conjunction empty
+    (<|>) (Conjunction a) (Conjunction b)
+        = Conjunction (a <|> b)
+
+instance Applicative Disjunction where
+    pure = Disjunction . pure
+    (<*>) (Disjunction a) (Disjunction b)
+        = Disjunction (a <*> b)
+
+instance Alternative Disjunction where
+    empty = Disjunction empty
+    (<|>) (Disjunction a) (Disjunction b)
+        = Disjunction (a <|> b)
+
+-- | Flattened BooleanExprLit
+type BooleanExprFlatLitF
     =   BooleanLit
-    :+: BooleanCD
+    :+: Conjunction
+    :+: Disjunction
 
-type BooleanExprCDLit = Term BooleanExprCDLitF
+type BooleanExprFlatLit = Term BooleanExprFlatLitF
+
+-- TODO: This could be done but needs a bigger impl which doesn't belong here!
+-- instance Boolean (BooleanExprFlatLit) where
+--     and = iBAnd
+--     or = iBOr
+--     not = iBNot
 
 {-----------------------------------------------------------------------------}
 -- Conjunctive normal form (CNF)
 
-type CNF = BooleanCD (BooleanLit ())
+type CNF = Conjunction (Disjunction (BooleanLit Void))
 
--- Shorthands
-lPos :: String -> BooleanLit a
-lPos = BooleanLit True
-
-lNeg :: String -> BooleanLit a
-lNeg = BooleanLit False
+-- And another little shortcut
+cnfFromList :: [[BooleanLit a]] -> CNF
+cnfFromList = Conjunction . fmap (Disjunction . fmap undefined)
 
 {-----------------------------------------------------------------------------}
 -- Numbered variables

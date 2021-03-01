@@ -9,6 +9,7 @@
 module BooleanAlgebra.CNFSpec where
 
 import Control.Monad (join)
+import Data.Foldable (toList)
 
 import Test.Hspec
 import Test.Hspec.QuickCheck
@@ -24,15 +25,14 @@ import BooleanAlgebra.CNF
 import BooleanAlgebra.Examples
 import qualified Gen as G
 
--- distributeToCNF :: DistributeDoC f => Term f -> CNF
-regression01In :: BooleanExprCDLit
-regression01In = iBooleanCD [
-    [   iBooleanCD [[ iPos [c] | c <- "abc" ]]
-    ,   iBooleanCD [[ iPos [c] | c <- "def" ]]
+regression01In :: BooleanExprFlatLit
+regression01In = iConjunction [ iDisjunction
+    [   iConjunction [ iPos [c] | c <- "abc" ]
+    ,   iConjunction [ iPos [c] | c <- "def" ]
     ]]
 
 regression01Ex :: CNF
-regression01Ex = BooleanCD [[ lPos [c1], lPos [c2] ] | c1 <- "abc", c2 <- "def" ]
+regression01Ex = Conjunction [ Disjunction [ lPos [c1], lPos [c2] ] | c1 <- "abc", c2 <- "def" ]
 
 regression02In :: BooleanExpr
 regression02In = let
@@ -43,12 +43,17 @@ regression02In = let
     G.existsUnique [1..3] $ \position ->
     number `isAt` position
 
-count x = length . filter (==x)
+count :: Eq a => (a -> Bool) -> [a] -> Int
+count x = length . filter x
+
+-- Count appeareances of "N1P1" per clause
+regression02Info :: CNF -> [Int]
+regression02Info (Conjunction xs) = fmap (count ((=="N1P1") . litName) . toList) xs
 
 regression02Check :: CNF -> Bool
-regression02Check (BooleanCD xs) =
+regression02Check cnf =
     -- N1P1 occurs at most once in each clause
-    (maximum . fmap (count $ BooleanLit True "vN1P1")) xs == 1
+    maximum (regression02Info cnf) == 1
 
 spec_distributeToCNF = describe "distributeToCNF" $ do
     it "distributes correctly" $ distributeToCNF regression01In `shouldBe` regression01Ex
@@ -60,4 +65,3 @@ spec :: Spec
 spec = do
     spec_distributeToCNF
     spec_toCNF
-

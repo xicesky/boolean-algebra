@@ -70,7 +70,7 @@ exampleExpr05 = iBNot $
 
 -- | An example of the 'CNF' type
 exampleCNF :: CNF
-exampleCNF = BooleanCD [ [ lPos "a", lNeg "b" ], [ lNeg "c", lPos "d" ] ]
+exampleCNF = cnfFromList [ [ lPos "a", lNeg "b" ], [ lNeg "c", lPos "d" ] ]
 
 {-----------------------------------------------------------------------------}
 -- Example substitutions on variables

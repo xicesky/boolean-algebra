@@ -73,14 +73,13 @@ showCon :: String -> [String] -> String
 showCon con [] = con
 showCon con args = "(" ++ con ++ " " ++ unwords args ++ ")"
 
--- Utility function: Concatenate a list of ShowS using a seperator
+-- | Concatenate a list of ShowS using a seperator
 ccShowList :: String -> String -> String -> [ShowS] -> ShowS
 ccShowList begin sep end list = let
     sList = foldr (.) id $ intersperse (showString sep) list
     in showString begin . sList . showString end
 
-{- Utility function:
-Concatenate lists of precedence-dependent arguments with an operator
+{- | Concatenate lists of precedence-dependent arguments with an operator
 -}
 ccListOp :: (Int, String) -> (Int -> ShowS) -> [Int -> ShowS] -> Int -> ShowS
 ccListOp _          empty []    = empty
@@ -207,48 +206,67 @@ Bug #2:
 -}
 
 -- Custom instance of ShowF - workaround for a bug in compdata
-instance ShowF BooleanCD where
-    showF (BooleanCD xs) = let
+instance ShowF Conjunction where
+    showF (Conjunction xs) = let
         ccList :: [ShowS] -> ShowS
         ccList = ccShowList "[" ", " "]"
         strCDs :: ShowS
-        strCDs = ccList . fmap (ccList . fmap (++)) $ xs
-        in (showCon "BooleanCD") [strCDs ""]
+        strCDs = ccList . fmap (++) $ xs
+        in (showCon "Conjunction") [strCDs ""]
+
+instance ShowF Disjunction where
+    showF (Disjunction xs) = let
+        ccList :: [ShowS] -> ShowS
+        ccList = ccShowList "[" ", " "]"
+        strCDs :: ShowS
+        strCDs = ccList . fmap (++) $ xs
+        in (showCon "Disjunction") [strCDs ""]
 
 -- Custom instance of ShowConstr
 -- FIXME: not pretty, due to the defintion of ShowConstr
-instance ShowConstr BooleanCD where
-    showConstr :: BooleanCD a -> String
-    showConstr _ = "BooleanCD []"
+instance ShowConstr Conjunction where
+    showConstr :: Conjunction a -> String
+    showConstr _ = "Conjunction []"
 
--- Pretty-printer for BooleanCD
-instance PrettyBool BooleanCD where
-    prettyPrintBoolAlg :: BooleanCD (Int -> ShowS) -> Int -> ShowS
-    prettyPrintBoolAlg (BooleanCD cds) d
-        = showCDs cds d where
-            showDisjs :: [Int -> ShowS] -> Int -> ShowS
-            showDisjs = ccListOp (3, "∨") empty where
-                empty = prettyPrintAB BFalse
+-- Custom instance of ShowConstr
+-- FIXME: not pretty, due to the defintion of ShowConstr
+instance ShowConstr Disjunction where
+    showConstr :: Disjunction a -> String
+    showConstr _ = "Disjunction []"
 
+-- Pretty-printer for Conjunction
+instance PrettyBool Conjunction where
+    prettyPrintBoolAlg :: Conjunction (Int -> ShowS) -> Int -> ShowS
+    prettyPrintBoolAlg (Conjunction ts)
+        = showConjs ts where
             showConjs :: [Int -> ShowS] -> Int -> ShowS
             showConjs = ccListOp (6, "∧") empty where
                 empty = prettyPrintAB BTrue
 
-            showCDs :: [[Int -> ShowS]] -> Int -> ShowS
-            showCDs = showConjs . fmap showDisjs
+-- Pretty-printer for Disjunction
+instance PrettyBool Disjunction where
+    prettyPrintBoolAlg :: Disjunction (Int -> ShowS) -> Int -> ShowS
+    prettyPrintBoolAlg (Disjunction ts)
+        = showDisjs ts where
+            showDisjs :: [Int -> ShowS] -> Int -> ShowS
+            showDisjs = ccListOp (3, "∨") empty where
+                empty = prettyPrintAB BFalse
 
 -- Special instance, BooleanCD is just "a little different"
-instance Render BooleanCD where
-    stringTreeAlg :: Alg BooleanCD (Tree String)
-    stringTreeAlg (BooleanCD xs) = Node "Conjunction" $
-        fmap (Node "Disjunction") xs
+instance Render Conjunction
+instance Render Disjunction
 
 {-----------------------------------------------------------------------------}
 -- Instances for CNF
 
 -- Pretty-printer for CNF
 -- Idea: Maybe print each disjunction on a seperate line
-instance PrettyAlmostBool a => PrettyAlmostBool (BooleanCD a) where
-    prettyPrintAB :: BooleanCD a -> Int -> ShowS
+instance PrettyAlmostBool a => PrettyAlmostBool (Conjunction a) where
+    prettyPrintAB :: Conjunction a -> Int -> ShowS
+    prettyPrintAB = prettyPrintBoolAlg . fmap prettyPrintAB
+    prettyTree = stringTreeAlg . fmap prettyTree
+
+instance PrettyAlmostBool a => PrettyAlmostBool (Disjunction a) where
+    prettyPrintAB :: Disjunction a -> Int -> ShowS
     prettyPrintAB = prettyPrintBoolAlg . fmap prettyPrintAB
     prettyTree = stringTreeAlg . fmap prettyTree

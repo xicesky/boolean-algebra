@@ -23,8 +23,9 @@ Inspiration for solver:
 demo :: BooleanExpr -> IO ()
 demo ex = do
     putStr "Original    : "; printBool ex
-    putStr "Simplified  : "; printBool $ simplifyPrimitive ex
-    putStr "Intermediate: "; printBool $ aggregateConjDisj' $ pushNegations' $ simplifyPrimitive ex
+    putStr "Simplified  : "; printBool $ simplify ex
+    -- The intermediate form doesn't really show anything fancy
+    --putStr "Intermediate: "; printBool $ aggregateConjDisj' $ simplify ex
     putStr "CNF         : "; printBool $ toCNF ex
 
 standardDemo :: IO ()

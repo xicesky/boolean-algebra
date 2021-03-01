@@ -12,6 +12,8 @@
 
 module BooleanAlgebra.Aggregate where
 
+import Control.Applicative (Alternative(..))
+
 import Data.Comp.Term
 import Data.Comp.Ops
 import Data.Comp.Sum (inject, split)
@@ -30,7 +32,7 @@ import BooleanAlgebra.Base
 import BooleanAlgebra.Simplify
 
 {-----------------------------------------------------------------------------}
--- Aggregator   (Helper)
+-- Aggregator   (Flattens repeated operators)
 
 {- 
 Repeated conjunctions are aggregated into lists (using associativity)
@@ -43,52 +45,69 @@ Repeated disjunctions are aggregated into lists (using associativity)
 -}
 
 -- unCDLit gives us a guaranteed CD term
-unCDLit :: BooleanExprCDLit -> BooleanCD BooleanExprCDLit
-unCDLit = split unCD unLit where
-    unCD :: BooleanCD BooleanExprCDLit -> BooleanCD BooleanExprCDLit
-    unCD = id
-    unLit :: BooleanLit BooleanExprCDLit -> BooleanCD BooleanExprCDLit
-    unLit = BooleanCD . pure . pure . inject
+-- unCDLit :: BooleanExprCDLit -> BooleanCD BooleanExprCDLit
+-- unCDLit = split unCD unLit where
+--     unCD :: BooleanCD BooleanExprCDLit -> BooleanCD BooleanExprCDLit
+--     unCD = id
+--     unLit :: BooleanLit BooleanExprCDLit -> BooleanCD BooleanExprCDLit
+--     unLit = BooleanCD . pure . pure . inject
 
--- aggregateCD aggregates into conjunctions over disjunctions
-class Functor f => AggregateCD f where
-    aggregateCD :: Alg f BooleanExprCDLit
+-- | Internal representation: Flattened structure with known head
+data Flattened f
+    = Conj (Conjunction f)
+    | Disj (Disjunction f)
+    | Other f
 
--- Lift aggregateCD over sums of functors
-$(deriveLiftSum [''AggregateCD])
+-- | Internal helper: Inject the head back into the term
+injF :: (Conjunction :<: f, Disjunction :<: f) => Flattened (Term f) -> Term f
+injF (Conj c) = inject c
+injF (Disj c) = inject c
+injF (Other t) = t
 
-instance AggregateCD BooleanValue where
-    aggregateCD :: BooleanValue BooleanExprCDLit -> BooleanExprCDLit
-    aggregateCD BTrue = iBooleanCD []       -- Conjunction of 0 terms
-    aggregateCD BFalse = iBooleanCD [[]]    -- Disjunction of 0 terms
 
-instance AggregateCD BooleanLit where
-    aggregateCD :: BooleanLit BooleanExprCDLit -> BooleanExprCDLit
-    aggregateCD lit = inject lit
+-- aggregateOps aggregates into conjunctions over disjunctions
+class Functor f => AggregateOps f where
+    aggregateOps :: Alg f (Flattened BooleanExprFlatLit)
 
-instance AggregateCD BooleanAnd where
-    aggregateCD :: BooleanAnd BooleanExprCDLit -> BooleanExprCDLit
-    aggregateCD (BAnd cda cdb) = iBooleanCD $ cdas ++ cdbs where
-        BooleanCD cdas = unCDLit cda
-        BooleanCD cdbs = unCDLit cdb
+-- Lift aggregateOps over sums of functors
+$(deriveLiftSum [''AggregateOps])
 
-instance AggregateCD BooleanOr where
-    aggregateCD :: BooleanOr BooleanExprCDLit -> BooleanExprCDLit
-    aggregateCD (BOr cda cdb) = let
-        BooleanCD cdas = unCDLit cda
-        BooleanCD cdbs = unCDLit cdb
-        in case (cdas, cdbs) of
-            -- Both are just disjunctions
-            ([disja], [disjb]) -> iBooleanCD [disja ++ disjb]
-            -- All other cases require an outer CD term
-            _ -> iBooleanCD [[cda, cdb]]
+instance AggregateOps BooleanValue where
+    aggregateOps :: Alg BooleanValue (Flattened BooleanExprFlatLit)
+    aggregateOps BTrue  = Conj empty    -- Conjunction of 0 terms
+    aggregateOps BFalse = Disj empty    -- Disjunction of 0 terms
+
+instance AggregateOps BooleanLit where
+    aggregateOps :: Alg BooleanLit (Flattened BooleanExprFlatLit)
+    aggregateOps lit = Other $ inject $ fmap undefined lit  -- FIXME undefined
+
+-- FIXME: Remove
+type FlatStuff = Flattened BooleanExprFlatLit
+
+instance AggregateOps BooleanAnd where
+    aggregateOps :: Alg BooleanAnd (Flattened BooleanExprFlatLit)
+    aggregateOps (BAnd l r) = flat l r where
+        flat :: FlatStuff -> FlatStuff -> FlatStuff
+        flat (Conj l) (Conj r)  = Conj $ l <|> r
+        flat (Conj l) rhs       = Conj $ l <|> pure (injF rhs)
+        flat lhs      (Conj r)  = Conj $ pure (injF lhs) <|> r
+        flat lhs      rhs       = Conj $ pure (injF lhs) <|> pure (injF rhs)
+
+instance AggregateOps BooleanOr where
+    aggregateOps :: Alg BooleanOr (Flattened BooleanExprFlatLit)
+    aggregateOps (BOr l r) = flat l r where
+        flat :: FlatStuff -> FlatStuff -> FlatStuff
+        flat (Disj l) (Disj r)  = Disj $ l <|> r
+        flat (Disj l) rhs       = Disj $ l <|> pure (injF rhs)
+        flat lhs      (Disj r)  = Disj $ pure (injF lhs) <|> r
+        flat lhs      rhs       = Disj $ pure (injF lhs) <|> pure (injF rhs)
 
 -- This is the actual aggregation function, using a catamorphism
-aggregateConjDisj :: AggregateCD f => Term f -> BooleanExprCDLit
-aggregateConjDisj = cata aggregateCD
+aggregateConjDisj :: AggregateOps f => Term f -> BooleanExprFlatLit
+aggregateConjDisj = injF . cata aggregateOps
 
 -- Tiny helper for our old "Either" problem
-aggregateConjDisj' :: AggregateCD f => MaybeTrivial (Term f) -> BooleanExprCDLit
-aggregateConjDisj' (Left BTrue) = iBooleanCD []
-aggregateConjDisj' (Left BFalse) = iBooleanCD [[]]  -- TODO: this should be a function, also BVal -> Boolean
+aggregateConjDisj' :: AggregateOps f => MaybeTrivial (Term f) -> BooleanExprFlatLit
+aggregateConjDisj' (Left BTrue) = iConjunction empty
+aggregateConjDisj' (Left BFalse) = iDisjunction empty
 aggregateConjDisj' (Right e) = aggregateConjDisj e

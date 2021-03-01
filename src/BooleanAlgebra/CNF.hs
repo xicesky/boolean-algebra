@@ -36,25 +36,16 @@ import BooleanAlgebra.Aggregate
 -- Distributes disjunctions over conjunctions:
 --      a ∨ (b ∧ c) = (a ∨ b) ∧ (a ∨ c)
 
--- a ∨ (x0 ∧ x1 ∧ ...) = (a ∨ x0) ∧ (a ∨ x1) ∧ ...
-distrLit :: BooleanLit a -> [[BooleanLit a]] -> [[BooleanLit a]]
-distrLit a = fmap (a :)
+distributeCNF :: Disjunction (Conjunction e) -> Conjunction (Disjunction e)
+distributeCNF = sequenceA       -- Well, isn't this easy.
 
--- (a0 ∨ ...) ∨ (x0 ∧ ...) = (a0 ∨ ... ∨ x0) ∧ ...
-distrDisj :: [BooleanLit a] -> [[BooleanLit a]] -> [[BooleanLit a]]
-distrDisj as = fmap (as ++)
+joinConjunction :: Conjunction (Conjunction e) -> Conjunction e
+joinConjunction (Conjunction xs) = -- Monad.join
+    Conjunction [y | Conjunction x <- xs, y <- x]
 
--- (as0 ∧ as1 ∧ ...) ∨ (x0 ∧ ...) = (as0 ∨ (x0 ...)) ∧ (as1 ∨ (x0 ...)) ∧ ...
-distrConj :: [[BooleanLit a]] -> [[BooleanLit a]] -> [[BooleanLit a]]
-distrConj ass xs = ass >>= (`distrDisj` xs)
-
--- Disjunction of two CNFs
-distrCNF :: CNF -> CNF -> CNF
-distrCNF (BooleanCD a) (BooleanCD x) = BooleanCD $ distrConj a x
-
--- Conjunction of two CNFs
-joinCNF :: CNF -> CNF -> CNF
-joinCNF (BooleanCD a) (BooleanCD x) = BooleanCD $ a ++ x
+joinDisjunction :: Disjunction (Disjunction e) -> Disjunction e
+joinDisjunction (Disjunction xs) = -- Monad.join
+    Disjunction [y | Disjunction x <- xs, y <- x]
 
 -- Distribute Disjunctions over Conjunctions (limited to BooleanCD)
 class Functor f => DistributeDoC f where
@@ -65,14 +56,15 @@ $(deriveLiftSum [''DistributeDoC])
 
 instance DistributeDoC BooleanLit where
     distributeDoC :: BooleanLit CNF -> CNF
-    distributeDoC lit = BooleanCD [[fmap undefined lit]]
+    distributeDoC = pure . pure . fmap undefined
 
-instance DistributeDoC BooleanCD where
-    distributeDoC :: BooleanCD CNF -> CNF
-    distributeDoC (BooleanCD conjs) = foldr1 joinCNF $ fmap distr conjs where
-        distr :: [CNF] -> CNF
-        distr [x]       = x
-        distr (x:xs)    = distr $ fmap (distrCNF x) xs
+instance DistributeDoC Conjunction where
+    distributeDoC :: Conjunction CNF -> CNF
+    distributeDoC = joinConjunction
+
+instance DistributeDoC Disjunction where
+    distributeDoC :: Disjunction CNF -> CNF
+    distributeDoC = fmap joinDisjunction . distributeCNF
 
 distributeToCNF :: DistributeDoC f => Term f -> CNF
 distributeToCNF = cata distributeDoC
