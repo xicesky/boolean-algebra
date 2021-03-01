@@ -9,12 +9,7 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Instances ()
 
-import BooleanAlgebra.Class
-import BooleanAlgebra.Base
-import BooleanAlgebra.Pretty
-import BooleanAlgebra.Simplify
-import BooleanAlgebra.Aggregate
-import BooleanAlgebra.CNF
+import BooleanAlgebra
 import BooleanAlgebra.Examples
 import qualified Gen as G
 

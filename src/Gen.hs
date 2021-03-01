@@ -4,15 +4,7 @@ module Gen where
 
 import Prelude hiding (and, or, not, (&&), (||))
 
-import BooleanAlgebra.Class
-import BooleanAlgebra.Base
-
--- FIXME ghci imports
-import BooleanAlgebra.Pretty
-import BooleanAlgebra.Simplify
-import BooleanAlgebra.Aggregate
-import BooleanAlgebra.CNF
-import BooleanAlgebra.Examples
+import BooleanAlgebra
 
 -- Predicate logic!?!?
 instance Boolean b => Boolean (a -> b) where

@@ -2,11 +2,7 @@ module Main where
 
 import Criterion.Main
 
-import BooleanAlgebra.Base
-import BooleanAlgebra.Pretty
-import BooleanAlgebra.Simplify
-import BooleanAlgebra.Aggregate
-import BooleanAlgebra.CNF
+import BooleanAlgebra
 import BooleanAlgebra.Examples
 
 {- Notes & interesting reads:
