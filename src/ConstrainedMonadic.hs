@@ -2,10 +2,6 @@
 -- Just playing around with Ideas from
 --  https://www-ps.informatik.uni-kiel.de/~sebf/category/projects/index.html
 
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE InstanceSigs #-}
-
 module ConstrainedMonadic where
 
 import Control.Applicative

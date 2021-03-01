@@ -1,26 +1,4 @@
 
--- "Standard" extensions
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE InstanceSigs           #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE DeriveFunctor          #-} 
-
--- Type magic
-{-# LANGUAGE KindSignatures         #-}
-{-# LANGUAGE DataKinds              #-}
-{-# LANGUAGE ConstraintKinds        #-}
-{-# LANGUAGE TypeFamilies           #-}
-{-# LANGUAGE TypeOperators          #-}
-{-# LANGUAGE UndecidableInstances   #-}
-{-# LANGUAGE PolyKinds              #-}
-{-# LANGUAGE RankNTypes             #-}
-
--- And some more flexibility
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE GADTs                  #-}
-{-# LANGUAGE EmptyDataDecls         #-}
-
 {- Compdata version with multi-param kinds:
     Given f :: * -> * -> * and g: * -> * ->
     we get (f :+: g) :: * -> * -> *

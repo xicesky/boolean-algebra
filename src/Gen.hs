@@ -1,11 +1,4 @@
 
--- "Standard" extensions
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE InstanceSigs           #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE DeriveFunctor          #-} 
-
 -- | Let's try to generate some formulas for Sudoku :)
 module Gen where
 

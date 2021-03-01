@@ -1,15 +1,4 @@
 
--- "Standard" extensions
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE InstanceSigs           #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE DeriveFunctor          #-} 
-
--- Extensions for compdata usage
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TypeOperators          #-}
-
 module BooleanAlgebra.Base where
 
 {- Inspiration:
@@ -23,6 +12,7 @@ module BooleanAlgebra.Base where
         http://www.cs.nott.ac.uk/~pszgmh/alacarte.pdf
 -}
 
+import Data.Kind (Type)
 import Data.Void
 import Control.Applicative (Alternative(..))
 
@@ -50,16 +40,22 @@ import qualified BooleanAlgebra.Class as B
 {-# ANN module "HLint: ignore Use newtype instead of data" #-}
 
 {-----------------------------------------------------------------------------}
--- Thinking
+-- General utilities
+
+class Functor f => ConstFunctor f where
+    constmap :: forall a b. f a -> f b
 
 {-----------------------------------------------------------------------------}
 -- Basic boolean expressions
 
 -- Boolean Values
+
+type BooleanValue :: Type -> Type
 data BooleanValue e = BTrue | BFalse
     deriving (Show, Eq, Functor)
 
 -- Variables
+type BooleanVariable :: Type -> Type
 data BooleanVariable e = BVariable String   -- BIG YIKES! FIXME: Need to rewrite compdata
     deriving (Show, Eq, Functor)
 
@@ -89,6 +85,13 @@ $(deriveDefault
     ,''BooleanAnd
     ,''BooleanOr
     ])
+
+instance ConstFunctor BooleanValue where
+    constmap BTrue = BTrue
+    constmap BFalse = BFalse
+
+instance ConstFunctor BooleanVariable where
+    constmap (BVariable s) = BVariable s
 
 -- Shorthand names for some constructors
 iBVar :: (BooleanVariable :<: f) => String -> Cxt h f a
@@ -175,12 +178,16 @@ instance Boolean BooleanExprSimp where
 -- Boolean "literal" form
 -- Literal = Variable + optional Negation
 
+type BooleanLit :: Type -> Type
 data BooleanLit e = BooleanLit Bool String
     deriving (Show, Eq, Functor)
     {- NOTE: For this construction deriveDefault apparently
     can't work out Show and Eq -}
 
 $(deriveDefault [''BooleanLit])
+
+instance ConstFunctor BooleanLit where
+    constmap (BooleanLit b s) = BooleanLit b s
 
 -- Shorthands
 lPos :: String -> BooleanLit a

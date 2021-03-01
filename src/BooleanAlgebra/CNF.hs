@@ -1,15 +1,4 @@
 
--- "Standard" extensions
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE InstanceSigs           #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE DeriveFunctor          #-} 
-
--- Extensions for compdata usage
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TypeOperators          #-}
-
 module BooleanAlgebra.CNF where
 
 import Data.Comp.Term

@@ -2,14 +2,6 @@
 -- Playing around with nondeterministic evaluation
 -- from the paper https://www-ps.informatik.uni-kiel.de/~sebf/data/pub/atps09.pdf
 
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE RankNTypes #-}
-
--- These extensions are maybe not needed
-{- LANGUAGE FlexibleInstances #-}
-{- LANGUAGE UndecidableInstances #-}
-
 module Nondeterminism where
 
 import Prelude hiding (Bounded)

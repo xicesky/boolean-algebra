@@ -1,15 +1,4 @@
 
--- "Standard" extensions
-{-# LANGUAGE ScopedTypeVariables    #-}
-{-# LANGUAGE InstanceSigs           #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE DeriveFunctor          #-} 
-
--- Extensions for compdata usage
-{-# LANGUAGE TemplateHaskell        #-}
-{-# LANGUAGE TypeOperators          #-}
-
 module BooleanAlgebra.Pretty where
 
 import Data.Comp.Term
@@ -139,14 +128,14 @@ instance PrettyBool e => PrettyAlmostBool (Term e) where
 -- Non-recursive terms can be pretty-printed for any param type
 instance PrettyAlmostBool (BooleanValue a) where
     prettyPrintAB :: BooleanValue a -> Int -> ShowS
-    prettyPrintAB = prettyPrintBoolAlg . fmap undefined
-    prettyTree = stringTreeAlg . fmap undefined
+    prettyPrintAB = prettyPrintBoolAlg . constmap
+    prettyTree = stringTreeAlg . constmap
 
 -- Non-recursive terms can be pretty-printed for any param type
 instance PrettyAlmostBool (BooleanVariable a) where
     prettyPrintAB :: BooleanVariable a -> Int -> ShowS
-    prettyPrintAB = prettyPrintBoolAlg . fmap undefined
-    prettyTree = stringTreeAlg . fmap undefined
+    prettyPrintAB = prettyPrintBoolAlg . constmap
+    prettyTree = stringTreeAlg . constmap
 
 {-----------------------------------------------------------------------------}
 -- Instances for simplified expressions
@@ -174,8 +163,8 @@ instance Render BooleanLit
 -- Non-recursive terms can be pretty-printed for any param type
 instance PrettyAlmostBool (BooleanLit a) where
     prettyPrintAB :: BooleanLit a -> Int -> ShowS
-    prettyPrintAB = prettyPrintBoolAlg . fmap undefined
-    prettyTree = stringTreeAlg . fmap undefined
+    prettyPrintAB = prettyPrintBoolAlg . constmap
+    prettyTree = stringTreeAlg . constmap
 
 {-----------------------------------------------------------------------------}
 -- Instances for aggregate form

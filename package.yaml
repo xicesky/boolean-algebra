@@ -32,6 +32,31 @@ dependencies:
 - unordered-containers
 - sky-utils
 
+default-extensions:
+- ConstraintKinds
+- DataKinds
+- DeriveFunctor
+- EmptyDataDecls
+- FlexibleContexts
+- FlexibleContexts
+- FlexibleInstances
+- GADTs
+- InstanceSigs
+- InstanceSigs
+- KindSignatures
+- MultiParamTypeClasses
+- PolyKinds
+- RankNTypes
+- RankNTypes
+- ScopedTypeVariables
+- ScopedTypeVariables
+- StandaloneKindSignatures
+- TemplateHaskell
+- TypeFamilies
+- TypeFamilies
+- TypeOperators
+- UndecidableInstances
+
 library:
   source-dirs: src
 
