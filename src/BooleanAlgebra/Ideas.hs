@@ -5,9 +5,9 @@ import Data.Comp.Term
 import Data.Comp.Ops
 import Data.Comp.Render
 
-import BooleanAlgebra.THUtil
-import BooleanAlgebra.Base
-import BooleanAlgebra.Pretty
+import BooleanAlgebra.Util.THUtil
+import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Base.Pretty
 
 {-----------------------------------------------------------------------------}
 -- Extended boolean functions

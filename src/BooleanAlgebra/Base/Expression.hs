@@ -1,5 +1,5 @@
 
-module BooleanAlgebra.Base where
+module BooleanAlgebra.Base.Expression where
 
 {- Inspiration:
     https://tuprints.ulb.tu-darmstadt.de/2759/1/rkibria-dissertation-final-korrigiert1.pdf
@@ -30,9 +30,10 @@ import Data.Comp.Derive
 import Data.Comp.Show ()            -- for the Show instance
 import Data.Comp.Equality ()        -- for the Eq instance
 
-import BooleanAlgebra.THUtil
-import BooleanAlgebra.Class
-import qualified BooleanAlgebra.Class as B
+import BooleanAlgebra.Util.THUtil
+import BooleanAlgebra.Util.Util
+import BooleanAlgebra.Base.Class
+import qualified BooleanAlgebra.Base.Class as B
 
 {-----------------------------------------------------------------------------}
 -- Annotations for HLint
@@ -40,16 +41,10 @@ import qualified BooleanAlgebra.Class as B
 {-# ANN module "HLint: ignore Use newtype instead of data" #-}
 
 {-----------------------------------------------------------------------------}
--- General utilities
-
-class Functor f => ConstFunctor f where
-    constmap :: forall a b. f a -> f b
-
-{-----------------------------------------------------------------------------}
 -- Basic boolean expressions
 
--- Boolean Values
 
+-- Boolean Values
 type BooleanValue :: Type -> Type
 data BooleanValue e = BTrue | BFalse
     deriving (Show, Eq, Functor)

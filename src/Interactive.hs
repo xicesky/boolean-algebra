@@ -8,7 +8,6 @@ import Test.QuickCheck
 import Test.QuickCheck.Arbitrary
 
 import BooleanAlgebra
-import BooleanAlgebra.Arbitrary
 
 import Debug.Trace
 

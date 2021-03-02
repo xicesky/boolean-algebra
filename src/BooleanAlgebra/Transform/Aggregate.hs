@@ -1,5 +1,5 @@
 
-module BooleanAlgebra.Aggregate where
+module BooleanAlgebra.Transform.Aggregate where
 
 import Control.Applicative (Alternative(..))
 
@@ -16,9 +16,10 @@ import Data.Comp.Derive
 --import Data.Comp.Show ()            -- for the Show instance
 --import Data.Comp.Equality ()        -- for the Eq instance
 
-import BooleanAlgebra.THUtil
-import BooleanAlgebra.Base
-import BooleanAlgebra.Simplify
+import BooleanAlgebra.Util.THUtil
+import BooleanAlgebra.Util.Util
+import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Transform.Simplify
 
 {-----------------------------------------------------------------------------}
 -- Aggregator   (Flattens repeated operators)

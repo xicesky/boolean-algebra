@@ -1,5 +1,5 @@
 
-module BooleanAlgebra.CNFSpec where
+module BooleanAlgebra.Transform.CNFSpec where
 
 import Control.Monad (join)
 import Data.Foldable (toList)
@@ -11,8 +11,7 @@ import Test.QuickCheck.Instances ()
 
 import BooleanAlgebra
 import BooleanAlgebra.Examples
-import qualified BooleanAlgebra.Logic as L
---import qualified Gen as G
+import qualified BooleanAlgebra.Base.Logic as L
 
 regression01In :: BooleanExprFlatLit
 regression01In = iConjunction [ iDisjunction

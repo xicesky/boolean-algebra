@@ -1,7 +1,7 @@
 
 {-# LANGUAGE UndecidableInstances   #-}
 
-module BooleanAlgebra.Variable where
+module BooleanAlgebra.Transform.Variable where
 
 import Prelude hiding (lookup, (!!))
 import Data.Tuple (swap)
@@ -21,8 +21,8 @@ import Data.Comp.Generic (subterms')
 
 import Container
 
-import BooleanAlgebra.THUtil
-import BooleanAlgebra.Base
+import BooleanAlgebra.Util.THUtil
+import BooleanAlgebra.Base.Expression
 
 {-----------------------------------------------------------------------------}
 

@@ -1,5 +1,5 @@
 
-module BooleanAlgebra.CNF where
+module BooleanAlgebra.Transform.CNF where
 
 import Data.Comp.Term
 import Data.Comp.Ops
@@ -15,10 +15,11 @@ import Data.Comp.Equality ()        -- for the Eq instance
 
 import Control.Monad (join)
 
-import BooleanAlgebra.THUtil
-import BooleanAlgebra.Base
-import BooleanAlgebra.Simplify
-import BooleanAlgebra.Aggregate
+import BooleanAlgebra.Util.THUtil
+import BooleanAlgebra.Util.Util
+import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Transform.Simplify
+import BooleanAlgebra.Transform.Aggregate
 
 {-----------------------------------------------------------------------------}
 -- Distributor  (Step 3 of toCNF)

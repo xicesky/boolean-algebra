@@ -10,7 +10,7 @@ When using this, consider hiding parts of the prelude:
 >>> import qualified Prelude as P
 
 -}
-module BooleanAlgebra.Class where
+module BooleanAlgebra.Base.Class where
 
 import Prelude hiding (and, or, not, (&&), (||))
 import qualified Prelude as P

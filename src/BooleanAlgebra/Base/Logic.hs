@@ -1,9 +1,9 @@
 
-module BooleanAlgebra.Logic where
+module BooleanAlgebra.Base.Logic where
 
 import Prelude hiding (and, or, not, (&&), (||))
 
-import BooleanAlgebra.Class
+import BooleanAlgebra.Base.Class
 
 -- Predicate logic!?!?
 instance Boolean b => Boolean (a -> b) where

@@ -8,12 +8,12 @@ import Data.Comp.Ops
 
 import Container
 
-import BooleanAlgebra.Base
-import BooleanAlgebra.Variable
-import BooleanAlgebra.Pretty
-import BooleanAlgebra.Simplify
-import BooleanAlgebra.Aggregate
-import BooleanAlgebra.CNF
+import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Base.Pretty
+import BooleanAlgebra.Transform.Variable
+import BooleanAlgebra.Transform.Simplify
+import BooleanAlgebra.Transform.Aggregate
+import BooleanAlgebra.Transform.CNF
 
 {-----------------------------------------------------------------------------}
 -- Example boolean expressions in varying forms

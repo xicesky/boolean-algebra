@@ -4,7 +4,7 @@
 
 -- | 'Arbitrary' instances for QuickCheck usage
 
-module BooleanAlgebra.Arbitrary where
+module BooleanAlgebra.Support.Arbitrary where
 
 import Prelude hiding (and, or, not, (&&), (||))
 
@@ -12,11 +12,11 @@ import Test.QuickCheck.Gen
 import Test.QuickCheck.Arbitrary
 import Test.QuickCheck.Modifiers
 
-import BooleanAlgebra.Class
-import BooleanAlgebra.Base
-import BooleanAlgebra.Pretty
-import BooleanAlgebra.Simplify
-import BooleanAlgebra.CNF
+import BooleanAlgebra.Base.Class
+import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Base.Pretty
+import BooleanAlgebra.Transform.Simplify
+import BooleanAlgebra.Transform.CNF
 
 import Debug.Trace
 

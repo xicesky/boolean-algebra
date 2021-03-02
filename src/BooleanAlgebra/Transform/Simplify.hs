@@ -1,5 +1,5 @@
 
-module BooleanAlgebra.Simplify where
+module BooleanAlgebra.Transform.Simplify where
 
 import Data.Comp.Term
 import Data.Comp.Ops
@@ -14,8 +14,9 @@ import Data.Comp.Derive
 import Data.Comp.Show ()            -- for the Show instance
 import Data.Comp.Equality ()        -- for the Eq instance
 
-import BooleanAlgebra.THUtil
-import BooleanAlgebra.Base
+import BooleanAlgebra.Util.THUtil
+import BooleanAlgebra.Util.Util
+import BooleanAlgebra.Base.Expression
 
 {-----------------------------------------------------------------------------}
 -- Simplifier   (Step 1 of toCNF)

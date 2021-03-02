@@ -1,5 +1,5 @@
 
-module BooleanAlgebra.Pretty where
+module BooleanAlgebra.Base.Pretty where
 
 import Data.Comp.Term
 import Data.Comp.Ops
@@ -19,8 +19,9 @@ import Data.Tree.View (showTree)
 import Data.Bool (bool)
 import Data.List (intersperse)
 
-import BooleanAlgebra.THUtil
-import BooleanAlgebra.Base
+import BooleanAlgebra.Util.THUtil
+import BooleanAlgebra.Util.Util
+import BooleanAlgebra.Base.Expression
 
 {-----------------------------------------------------------------------------}
 -- "Pretty" printer

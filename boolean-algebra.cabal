@@ -26,18 +26,19 @@ source-repository head
 library
   exposed-modules:
       BooleanAlgebra
-      BooleanAlgebra.Aggregate
-      BooleanAlgebra.Arbitrary
-      BooleanAlgebra.Base
-      BooleanAlgebra.Class
-      BooleanAlgebra.CNF
+      BooleanAlgebra.Base.Class
+      BooleanAlgebra.Base.Expression
+      BooleanAlgebra.Base.Logic
+      BooleanAlgebra.Base.Pretty
       BooleanAlgebra.Examples
       BooleanAlgebra.Ideas
-      BooleanAlgebra.Logic
-      BooleanAlgebra.Pretty
-      BooleanAlgebra.Simplify
-      BooleanAlgebra.THUtil
-      BooleanAlgebra.Variable
+      BooleanAlgebra.Support.Arbitrary
+      BooleanAlgebra.Transform.Aggregate
+      BooleanAlgebra.Transform.CNF
+      BooleanAlgebra.Transform.Simplify
+      BooleanAlgebra.Transform.Variable
+      BooleanAlgebra.Util.THUtil
+      BooleanAlgebra.Util.Util
       ConstrainedMonadic
       CustomCompData
       Gen
@@ -93,8 +94,8 @@ test-suite boolean-algebra-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      BooleanAlgebra.CNFSpec
-      BooleanAlgebra.VariableSpec
+      BooleanAlgebra.Transform.CNFSpec
+      BooleanAlgebra.Transform.VariableSpec
       Paths_boolean_algebra
   hs-source-dirs:
       test
