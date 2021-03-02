@@ -4,7 +4,7 @@ github:              "xicesky/boolean-algebra"
 license:             BSD3
 author:              "Markus Dangl"
 maintainer:          "sky@q1cc.net"
-copyright:           "(c) 2016 Markus Dangl"
+copyright:           "(c) 2021 Markus Dangl"
 
 extra-source-files:
 - README.md
