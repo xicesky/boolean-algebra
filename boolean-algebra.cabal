@@ -27,11 +27,13 @@ library
   exposed-modules:
       BooleanAlgebra
       BooleanAlgebra.Aggregate
+      BooleanAlgebra.Arbitrary
       BooleanAlgebra.Base
       BooleanAlgebra.Class
       BooleanAlgebra.CNF
       BooleanAlgebra.Examples
       BooleanAlgebra.Ideas
+      BooleanAlgebra.Logic
       BooleanAlgebra.Pretty
       BooleanAlgebra.Simplify
       BooleanAlgebra.THUtil
@@ -39,19 +41,22 @@ library
       ConstrainedMonadic
       CustomCompData
       Gen
+      Interactive
       Nondeterminism
   other-modules:
       Paths_boolean_algebra
   hs-source-dirs:
       src
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleContexts FlexibleInstances GADTs InstanceSigs InstanceSigs KindSignatures MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes RankNTypes ScopedTypeVariables ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeFamilies TypeFamilies TypeOperators UndecidableInstances
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
   build-depends:
-      base >=4.7 && <5
+      QuickCheck
+    , base >=4.7 && <5
     , compdata
     , containers
     , criterion
     , data-fix
     , deriving-compat
+    , hashable
     , mtl
     , sky-utils
     , transformers
@@ -65,16 +70,18 @@ executable boolean-algebra-exe
       Paths_boolean_algebra
   hs-source-dirs:
       app
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleContexts FlexibleInstances GADTs InstanceSigs InstanceSigs KindSignatures MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes RankNTypes ScopedTypeVariables ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeFamilies TypeFamilies TypeOperators UndecidableInstances
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      QuickCheck
+    , base >=4.7 && <5
     , boolean-algebra
     , compdata
     , containers
     , criterion
     , data-fix
     , deriving-compat
+    , hashable
     , mtl
     , sky-utils
     , transformers
@@ -87,10 +94,11 @@ test-suite boolean-algebra-test
   main-is: Spec.hs
   other-modules:
       BooleanAlgebra.CNFSpec
+      BooleanAlgebra.VariableSpec
       Paths_boolean_algebra
   hs-source-dirs:
       test
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleContexts FlexibleInstances GADTs InstanceSigs InstanceSigs KindSignatures MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes RankNTypes ScopedTypeVariables ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeFamilies TypeFamilies TypeOperators UndecidableInstances
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
@@ -101,6 +109,7 @@ test-suite boolean-algebra-test
     , criterion
     , data-fix
     , deriving-compat
+    , hashable
     , hspec
     , mtl
     , quickcheck-instances

@@ -11,7 +11,8 @@ import Test.QuickCheck.Instances ()
 
 import BooleanAlgebra
 import BooleanAlgebra.Examples
-import qualified Gen as G
+import qualified BooleanAlgebra.Logic as L
+--import qualified Gen as G
 
 regression01In :: BooleanExprFlatLit
 regression01In = iConjunction [ iDisjunction
@@ -27,8 +28,8 @@ regression02In = let
     isAt :: BooleanAlgebra b => Int -> Int -> b
     isAt n i = var $ "N" ++ show n ++ "P" ++ show i
     in  
-    G.forAll [1..3] $ \number ->
-    G.existsUnique [1..3] $ \position ->
+    L.forAll [1..3] $ \number ->
+    L.existsUnique [1..3] $ \position ->
     number `isAt` position
 
 count :: Eq a => (a -> Bool) -> [a] -> Int

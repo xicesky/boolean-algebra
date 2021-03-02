@@ -1,4 +1,6 @@
 
+{-# LANGUAGE UndecidableInstances   #-}
+
 {- Compdata version with multi-param kinds:
     Given f :: Type -> Type -> Type and g: Type -> Type ->
     we get (f :+: g) :: Type -> Type -> Type

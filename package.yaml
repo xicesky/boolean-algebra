@@ -24,13 +24,15 @@ dependencies:
 - data-fix
 - mtl
 - transformers
-- criterion
 - compdata
 - tree-view
 - deriving-compat
+- hashable
 - containers
 - unordered-containers
 - sky-utils
+- criterion
+- QuickCheck
 
 default-extensions:
 - ConstraintKinds
@@ -38,25 +40,21 @@ default-extensions:
 - DeriveFunctor
 - EmptyDataDecls
 - FlexibleContexts
-- FlexibleContexts
 - FlexibleInstances
 - GADTs
 - InstanceSigs
-- InstanceSigs
 - KindSignatures
+- LambdaCase
 - MultiParamTypeClasses
 - NoStarIsType
 - PolyKinds
 - RankNTypes
-- RankNTypes
-- ScopedTypeVariables
 - ScopedTypeVariables
 - StandaloneKindSignatures
 - TemplateHaskell
-- TypeFamilies
+- TypeApplications
 - TypeFamilies
 - TypeOperators
-- UndecidableInstances
 
 library:
   source-dirs: src

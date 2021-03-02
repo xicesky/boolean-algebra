@@ -24,11 +24,11 @@ packages:
     git: /Users/markus/Dev/haskell/sky-utils
     pantry-tree:
       size: 1087
-      sha256: ec53488c15449c4b5094c4403dfeee1be741c1a9901b4392d76964eb9e4ae329
-    commit: ee048faae3a41675ab56d90661de21f633131701
+      sha256: 06d4ed8f0a223b8243cf18facdca81564d89ded0eb763e2d04eba070929abdd2
+    commit: 9d9b55917a901f222c0d7edb26e6e84f15fb1b85
   original:
     git: /Users/markus/Dev/haskell/sky-utils
-    commit: ee048faae3a41675ab56d90661de21f633131701
+    commit: 9d9b55917a901f222c0d7edb26e6e84f15fb1b85
 snapshots:
 - completed:
     size: 563103

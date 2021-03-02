@@ -118,8 +118,16 @@ instance Boolean BooleanExpr where
     or = iBOr
     not = iBNot
 
-instance BooleanAlgebra BooleanExpr where
+instance BooleanPreAlgebra BooleanExpr where
     var = iBVar
+
+instance BooleanArithmetic BooleanExpr where
+    fromBool True = iBTrue
+    fromBool False = iBFalse
+    true = iBTrue
+    false = iBFalse
+
+instance BooleanAlgebra BooleanExpr
 
 instance Boolean (BooleanValue a) where
     and BTrue  x = x
@@ -155,7 +163,7 @@ instance Boolean (Term BooleanExprSimpF) where
     or = iBOr
     not = iBNot
 
-instance BooleanAlgebra (Term BooleanExprSimpF) where
+instance BooleanPreAlgebra (Term BooleanExprSimpF) where
     var = iBVar
 
 instance Boolean BooleanExprSimp where
@@ -282,11 +290,39 @@ cnfFromList = Conjunction . fmap (Disjunction . fmap constmap)
     compdata can't handle that (yet).
 -}
 
-data BooleanVarI e = BVariableI Int
+-- data BooleanVarI e = BVariableI Int
+--     deriving (Show, Eq, Functor)
+
+-- $(deriveDefault [''BooleanVarI])
+
+-- -- Shorthand names for some constructors
+-- iBVarI :: (BooleanVarI :<: f) => Int -> Cxt h f a
+-- iBVarI = iBVariableI
+
+-- instance ConstFunctor BooleanVarI where
+--     constmap (BVariableI i) = BVariableI i
+
+type BooleanLitI :: Type -> Type
+data BooleanLitI e = BooleanLitI Int
     deriving (Show, Eq, Functor)
+    {- NOTE: For this construction deriveDefault apparently
+    can't work out Show and Eq -}
 
-$(deriveDefault [''BooleanVarI])
+$(deriveDefault [''BooleanLitI])
 
--- Shorthand names for some constructors
-iBVarI :: (BooleanVarI :<: f) => Int -> Cxt h f a
-iBVarI = iBVariableI
+instance ConstFunctor BooleanLitI where
+    constmap (BooleanLitI i) = BooleanLitI i
+
+unLit :: BooleanLitI e -> Int
+unLit (BooleanLitI i) = i
+
+-- BooleanExprLit with numbered variables
+type BooleanExprLitIF
+    =   BooleanLitI
+    :+: BooleanAnd
+    :+: BooleanOr
+
+type BooleanExprLitI = Term BooleanExprLitIF
+
+-- CNF with numbered variables
+type CNFI = Conjunction (Disjunction (BooleanLitI Void))

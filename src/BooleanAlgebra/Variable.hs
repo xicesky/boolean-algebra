@@ -1,9 +1,17 @@
 
+{-# LANGUAGE UndecidableInstances   #-}
+
 module BooleanAlgebra.Variable where
 
-import Prelude hiding (lookup)
+import Prelude hiding (lookup, (!!))
+import Data.Tuple (swap)
+import Data.Bool (bool)
+import Data.Void
 import Control.Monad.Reader
 import Data.Functor.Identity (Identity(..))
+import Data.Foldable
+import qualified Data.HashMap.Lazy as HashMap
+import qualified Data.HashSet as HashSet
 
 import Data.Comp.Term
 import Data.Comp.Ops
@@ -16,10 +24,45 @@ import Container
 import BooleanAlgebra.THUtil
 import BooleanAlgebra.Base
 
--- Fetch the names of all the variables
-variableNames :: forall f. (Foldable f, BooleanVariable :<: f) =>
-    Term f -> [String]
-variableNames = fmap varName . subterms'
+{-----------------------------------------------------------------------------}
+
+class HasVariables t where
+    -- | Fetch the names of all the variables
+    variableNames :: t -> HashSet String
+
+-- | Fetch the all the numbered literals
+numberedLiterals :: forall f. (Foldable f, BooleanLitI :<: f) =>
+    Term f -> HashSet Int
+numberedLiterals = fromList . fmap unLit . subterms'
+
+-- | Fetch the all "names" of the numbered literals
+numberedVariables :: forall f. (Foldable f, BooleanLitI :<: f) =>
+    Term f -> HashSet Int
+numberedVariables = fromList . fmap (abs . unLit) . subterms'
+
+-- Cant make a default because ghc will complain about (Term f)
+variableNamesDefault :: forall f. (Foldable f, BooleanVariable :<: f) =>
+    Term f -> HashSet String
+variableNamesDefault = fromList . fmap varName . subterms'
+
+{-----------------------------------------------------------------------------}
+
+-- | Fetch the names of all the literals
+literalNamesDefault :: forall f. (Foldable f, BooleanLit :<: f) =>
+    Term f -> HashSet String
+literalNamesDefault = fromList . fmap litName . subterms'
+
+instance (Foldable f, BooleanVariable :<: f) => HasVariables (Term f) where
+    variableNames = variableNamesDefault
+
+instance HasVariables BooleanExprLit where
+    variableNames = literalNamesDefault
+
+instance HasVariables BooleanExprFlatLit where
+    variableNames = literalNamesDefault
+
+instance HasVariables CNF where
+    variableNames = fromList . fmap litName . (toList <=< toList)
 
 {-----------------------------------------------------------------------------}
 -- Variable substitution
@@ -125,7 +168,104 @@ substitute' :: forall f map.
 substitute' map = runIdentity . substituteM' map
 
 {-----------------------------------------------------------------------------}
+-- Substitutions for BooleanLit
 
+-- | A Monad used to run the substitution of literals.
+type LitSubstM g m = ReaderT (Subst m BooleanLit g) m
+
+class (Traversable f, Functor g) => SubstLit f g where
+    substLitAlg :: Monad m => AlgM (LitSubstM g m) f (Term g)
+
+instance {-# OVERLAPPABLE #-} (SubstLit f h, SubstLit g h) => SubstLit (f :+: g) h where
+    substLitAlg = caseF substLitAlg substLitAlg
+
+instance {-# OVERLAPPABLE #-} (Traversable f, Functor g, f :<: g) => SubstLit f g where
+    substLitAlg (fs :: f (Term g)) = return $ Term . inj $ fs
+
+-- The specialized instance for BooleanLit
+instance (Functor g) => SubstLit BooleanLit g where
+    substLitAlg :: forall m. Monad m => AlgM (LitSubstM g m) BooleanLit (Term g)
+    substLitAlg (fs :: BooleanLit (Term g)) = do
+            (Subst hom :: Subst m BooleanLit g) <- ask
+            (gtg :: Context g (Term g)) <- lift $ hom fs
+            return $ appCxt gtg
+
+-- | Monadic literal substitution catamorphism.
+substLitM :: forall m f g. (Monad m, SubstLit f g)
+    => HomM m BooleanLit g -> Term f -> m (Term g)
+substLitM hom f = runReaderT (cataM substLitAlg f) (Subst hom)
+
+{-----------------------------------------------------------------------------}
+-- Substitutions for BooleanLitI
+
+-- | A Monad used to run the substitution of literals.
+type LitISubstM g m = ReaderT (Subst m BooleanLitI g) m
+
+class (Traversable f, Functor g) => SubstLitI f g where
+    substLitIAlg :: Monad m => AlgM (LitISubstM g m) f (Term g)
+
+instance {-# OVERLAPPABLE #-} (SubstLitI f h, SubstLitI g h) => SubstLitI (f :+: g) h where
+    substLitIAlg = caseF substLitIAlg substLitIAlg
+
+instance {-# OVERLAPPABLE #-} (Traversable f, Functor g, f :<: g) => SubstLitI f g where
+    substLitIAlg (fs :: f (Term g)) = return $ Term . inj $ fs
+
+-- The specialized instance for BooleanLit
+instance (Functor g) => SubstLitI BooleanLitI g where
+    substLitIAlg :: forall m. Monad m => AlgM (LitISubstM g m) BooleanLitI (Term g)
+    substLitIAlg (fs :: BooleanLitI (Term g)) = do
+            (Subst hom :: Subst m BooleanLitI g) <- ask
+            (gtg :: Context g (Term g)) <- lift $ hom fs
+            return $ appCxt gtg
+
+-- | Monadic literal substitution catamorphism.
+substLitIM :: forall m f g. (Monad m, SubstLitI f g)
+    => HomM m BooleanLitI g -> Term f -> m (Term g)
+substLitIM hom f = runReaderT (cataM substLitIAlg f) (Subst hom)
+
+{-----------------------------------------------------------------------------}
+-- Substitute literals with numbers and back
+
+-- substLitM :: forall m f g. (Monad m, SubstLit f g)
+--     => HomM m BooleanLit g -> Term f -> m (Term g)
+-- substLitM hom f = runReaderT (cataM substLitAlg f) (Subst hom)
+
+type NameMap = HashMap Int String
+
+buildNameMaps :: forall f. (Foldable f, BooleanLit :<: f)
+    => Term f -> (NameMap, HashMap String Int)
+buildNameMaps term = let
+    indexed :: [(Int, String)]
+    indexed = (zip [1..] . HashSet.toList . literalNamesDefault) term
+    in (fromList indexed, fromList $ fmap swap indexed)
+
+numberLiterals :: forall f g. (SubstLit f g, BooleanLit :<: f, BooleanLitI :<: g)
+    => Term f -> (NameMap, Term g)
+numberLiterals term = let
+    (nameMap, repMap) = buildNameMaps term
+
+    -- hom :: BooleanLit a -> Identity (Context g a)
+    hom :: HomM Identity BooleanLit g
+    hom (BooleanLit sign name) = let
+        number :: Int
+        number = bool (-1) 1 sign * (repMap !! name)    -- has to exists, we just built it
+        in return $ iBooleanLitI number
+
+    in (nameMap, runIdentity $ substLitM hom term)
+
+nameLiterals :: forall f g. (SubstLitI f g, BooleanLitI :<: f, BooleanLit :<: g)
+    => NameMap -> Term f -> Term g
+nameLiterals nameMap term = let
+    -- HomM m BooleanLitI g -> Term f -> m (Term g)
+    --hom :: HomM Identity BooleanLitI g
+    hom :: BooleanLitI a -> Identity (Context g a)
+    hom (BooleanLitI number) = let
+        sign :: Bool
+        sign = number > 0
+        name :: String
+        name = nameMap !! abs number
+        in return $ iBooleanLit sign name
+    in runIdentity $ substLitIM hom term
 
 {-----------------------------------------------------------------------------}
 -- Idea: compare terms for α-Equivalence
