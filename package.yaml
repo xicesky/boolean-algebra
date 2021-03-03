@@ -38,6 +38,8 @@ default-extensions:
 - ConstraintKinds
 - DataKinds
 - DeriveFunctor
+- DeriveFoldable
+- DeriveTraversable
 - EmptyDataDecls
 - FlexibleContexts
 - FlexibleInstances

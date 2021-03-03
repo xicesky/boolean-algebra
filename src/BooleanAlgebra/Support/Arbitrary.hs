@@ -15,6 +15,8 @@ import Test.QuickCheck.Modifiers
 import BooleanAlgebra.Base.Class
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Base.Pretty
+
+import BooleanAlgebra.Transform.IntermediateForms
 import BooleanAlgebra.Transform.Simplify
 import BooleanAlgebra.Transform.CNF
 
@@ -61,7 +63,7 @@ instance Arbitrary BooleanExpr where
 
 instance Arbitrary BooleanExprLit where
     arbitrary = sized $ \case
-        0 -> return $ iPos "a"
+        0 -> return $ iBooleanLit 0
         _ -> let
             t0 :: Gen (MaybeTrivial BooleanExprLit)
             t0 = simplify <$> (arbitrary :: Gen BooleanExpr)

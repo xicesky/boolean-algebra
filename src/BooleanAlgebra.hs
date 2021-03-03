@@ -12,6 +12,13 @@ module BooleanAlgebra
     ,   module BooleanAlgebra.Support.Arbitrary
     ) where
 
+{- Inspiration:
+    https://tuprints.ulb.tu-darmstadt.de/2759/1/rkibria-dissertation-final-korrigiert1.pdf
+    https://bartoszmilewski.com/2017/02/28/f-algebras/
+    https://www-ps.informatik.uni-kiel.de/~sebf/projects/sat-solver/Control/Monad/Constraint/Boolean.lhs.html
+    Recursion schemes: https://blog.sumtypeofway.com/archive.html
+    Or as video: https://www.youtube.com/watch?v=Zw9KeP3OzpU
+-}
 
 import BooleanAlgebra.Base.Class
 import BooleanAlgebra.Base.Logic

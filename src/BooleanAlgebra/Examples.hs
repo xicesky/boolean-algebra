@@ -74,8 +74,7 @@ exampleSubst01 = substVar hom where
 type BooleanBaseNoVarsF
     = BooleanValue
     :+: BooleanNot
-    :+: BooleanAnd
-    :+: BooleanOr
+    :+: BooleanOp
 
 -- | Terms without variables
 type BooleanExprNoVars = Term BooleanBaseNoVarsF

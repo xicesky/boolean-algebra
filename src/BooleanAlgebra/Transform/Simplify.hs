@@ -1,22 +1,15 @@
 
 module BooleanAlgebra.Transform.Simplify where
 
-import Data.Comp.Term
-import Data.Comp.Ops
-import Data.Comp.Sum (inject)
-import Data.Comp.Algebra
-    (   Alg, Coalg, RAlg, RCoalg
-    ,   cata, ana, para, apo
-    )
+import Data.Bool (bool)
 
+import Data.Comp
 import Data.Comp.Derive
---import Data.Comp.Derive.Show
-import Data.Comp.Show ()            -- for the Show instance
-import Data.Comp.Equality ()        -- for the Eq instance
 
 import BooleanAlgebra.Util.THUtil
 import BooleanAlgebra.Util.Util
 import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Transform.IntermediateForms
 
 {-----------------------------------------------------------------------------}
 -- Simplifier   (Step 1 of toCNF)
@@ -48,16 +41,14 @@ instance SimpBool BooleanNot where
     simpBool (BNot (Left BFalse))   = Left BTrue
     simpBool (BNot (Right other))   = Right $ iBNot other
 
-instance SimpBool BooleanAnd where
-    simpBool :: BooleanAnd BooleanExprSimp -> BooleanExprSimp
+instance SimpBool BooleanOp where
+    simpBool :: BooleanOp BooleanExprSimp -> BooleanExprSimp
     simpBool (BAnd (Left BTrue) e)  = e
     simpBool (BAnd (Left BFalse) e) = Left BFalse
     simpBool (BAnd e (Left BTrue))  = e
     simpBool (BAnd e (Left BFalse)) = Left BFalse
     simpBool (BAnd (Right a) (Right b)) = Right $ iBAnd a b
 
-instance SimpBool BooleanOr where
-    simpBool :: BooleanOr BooleanExprSimp -> BooleanExprSimp
     simpBool (BOr (Left BTrue) e)   = Left BTrue
     simpBool (BOr (Left BFalse) e)  = e
     simpBool (BOr e (Left BTrue))   = Left BTrue
@@ -81,19 +72,16 @@ $(deriveLiftSum [''PushNeg])
 
 instance PushNeg BooleanVariable where
     pushNeg :: BooleanVariable (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
-    pushNeg (BVariable s) positive = iBooleanLit positive s
+    pushNeg (BVariable s) positive = iBooleanLit $ bool (-s) s positive
 
 instance PushNeg BooleanNot where
     pushNeg :: BooleanNot (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
     pushNeg (BNot lit) positive = lit (not positive)
 
-instance PushNeg BooleanAnd where
-    pushNeg :: BooleanAnd (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
+instance PushNeg BooleanOp where
+    pushNeg :: BooleanOp (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
     pushNeg (BAnd a b) False = iBOr (a False) (b False)
     pushNeg (BAnd a b) True  = iBAnd (a True) (b True)
-
-instance PushNeg BooleanOr where
-    pushNeg :: BooleanOr (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
     pushNeg (BOr a b) False = iBAnd (a False) (b False)
     pushNeg (BOr a b) True  = iBOr (a True) (b True)
 

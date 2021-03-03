@@ -19,6 +19,7 @@ import Data.Comp.Derive
 import BooleanAlgebra.Util.THUtil
 import BooleanAlgebra.Util.Util
 import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Transform.IntermediateForms
 import BooleanAlgebra.Transform.Simplify
 
 {-----------------------------------------------------------------------------}
@@ -74,17 +75,14 @@ instance AggregateOps BooleanLit where
 -- FIXME: Remove
 type FlatStuff = Flattened BooleanExprFlatLit
 
-instance AggregateOps BooleanAnd where
-    aggregateOps :: Alg BooleanAnd (Flattened BooleanExprFlatLit)
+instance AggregateOps BooleanOp where
+    aggregateOps :: Alg BooleanOp (Flattened BooleanExprFlatLit)
     aggregateOps (BAnd l r) = flat l r where
         flat :: FlatStuff -> FlatStuff -> FlatStuff
         flat (Conj l) (Conj r)  = Conj $ l <|> r
         flat (Conj l) rhs       = Conj $ l <|> pure (injF rhs)
         flat lhs      (Conj r)  = Conj $ pure (injF lhs) <|> r
         flat lhs      rhs       = Conj $ pure (injF lhs) <|> pure (injF rhs)
-
-instance AggregateOps BooleanOr where
-    aggregateOps :: Alg BooleanOr (Flattened BooleanExprFlatLit)
     aggregateOps (BOr l r) = flat l r where
         flat :: FlatStuff -> FlatStuff -> FlatStuff
         flat (Disj l) (Disj r)  = Disj $ l <|> r

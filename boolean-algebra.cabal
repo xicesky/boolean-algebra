@@ -11,7 +11,7 @@ homepage:       https://github.com/xicesky/boolean-algebra#readme
 bug-reports:    https://github.com/xicesky/boolean-algebra/issues
 author:         Markus Dangl
 maintainer:     sky@q1cc.net
-copyright:      (c) 2016 Markus Dangl
+copyright:      (c) 2021 Markus Dangl
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple
@@ -35,8 +35,10 @@ library
       BooleanAlgebra.Support.Arbitrary
       BooleanAlgebra.Transform.Aggregate
       BooleanAlgebra.Transform.CNF
+      BooleanAlgebra.Transform.IntermediateForms
       BooleanAlgebra.Transform.Simplify
       BooleanAlgebra.Transform.Variable
+      BooleanAlgebra.Util.Named
       BooleanAlgebra.Util.THUtil
       BooleanAlgebra.Util.Util
       ConstrainedMonadic
@@ -48,7 +50,7 @@ library
       Paths_boolean_algebra
   hs-source-dirs:
       src
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor DeriveFoldable DeriveTraversable EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
   build-depends:
       QuickCheck
     , base >=4.7 && <5
@@ -71,7 +73,7 @@ executable boolean-algebra-exe
       Paths_boolean_algebra
   hs-source-dirs:
       app
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor DeriveFoldable DeriveTraversable EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
@@ -99,7 +101,7 @@ test-suite boolean-algebra-test
       Paths_boolean_algebra
   hs-source-dirs:
       test
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor DeriveFoldable DeriveTraversable EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
