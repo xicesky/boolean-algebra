@@ -40,15 +40,13 @@ pattern BFalse = BooleanValue True
 
 -- | Variables
 type BooleanVariable :: Type -> Type
-data BooleanVariable e = BVariable Int
+data BooleanVariable e = BVariable String
     deriving (Show, Eq, Functor)
 
 -- | Literals: A variable with a sign
 type BooleanLit :: Type -> Type
 data BooleanLit e = BooleanLit Int
     deriving (Show, Eq, Functor)
-    {- NOTE: For this construction deriveDefault apparently
-    can't work out Show and Eq -}
 
 -- | Boolean negation
 data BooleanNot e = BNot e
@@ -97,12 +95,9 @@ type BooleanBaseF
     :+: BooleanNot
     :+: BooleanOp
 
--- Expression with integer variables
-type BooleanExprInt = Term BooleanBaseF
-
 -- "Standard" algebraic boolean expressions
 -- use ⊤, ⊥, ¬, ∧, ∨ and variables
-type BooleanExpr = WithNames BooleanExprInt
+type BooleanExpr = Term BooleanBaseF
 
 {-----------------------------------------------------------------------------}
 -- Conjunctive normal form
@@ -121,7 +116,7 @@ cnfFromList = Conjunction . fmap (Disjunction . fmap constmap)
 -- Utilities
 
 -- | Inverse of 'BVariable'
-unVar :: BooleanVariable a -> Int
+unVar :: BooleanVariable a -> String
 unVar (BVariable n) = n
 
 -- | Inverse of 'BooleanValue'
@@ -178,28 +173,18 @@ instance Boolean (BooleanValue a) where
     not BTrue    = BTrue
     not BFalse   = BFalse
 
--- FIXME !!
--- instance (Boolean b, Renameable b) => Boolean (WithNames b) where
---     and (nma, a) (nmb, b) = let
---         (nm, a', b') = mergeNames nma nmb a b
---         in (nm, a B.and b)
---     or (nma, a) (nmb, b) = let
---         (nm, a', b') = mergeNames nma nmb a b
---         in (nm, a B.or b)
---     not (nm, b) = (nm, B.not b)
-
-instance Boolean BooleanExprInt where
+instance Boolean BooleanExpr where
     and = iBAnd
     or = iBOr
     not = iBNot
 
--- instance BooleanPreAlgebra BooleanExpr where
---     var = iBVariable
+instance BooleanPreAlgebra BooleanExpr where
+    var = iBVariable
 
-instance BooleanArithmetic BooleanExprInt where
+instance BooleanArithmetic BooleanExpr where
     fromBool b = iBooleanValue b
 
--- instance BooleanAlgebra BooleanExpr
+instance BooleanAlgebra BooleanExpr
 
 {-----------------------------------------------------------------------------}
 -- Applicative / Alternative for Conjunction / Disjunction

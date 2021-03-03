@@ -30,7 +30,7 @@ import BooleanAlgebra.Base.Expression
 -- | Algebra for pretty-printing terms with compdata
 class (Traversable f, Render f) => PrettyBool f where
     -- showsPrec for our pretty printer
-    prettyPrintBoolAlg :: Monad m => AlgM (NameT m) f (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => AlgM (NameT n m) f (Int -> ShowS)
 
 -- Lift prettyPrintBoolAlg over sums of functors
 $(deriveLiftSum [''PrettyBool])
@@ -41,7 +41,7 @@ $(deriveLiftSum [''PrettyBool])
 
 -- FIXME: needed ????
 class PrettyWithoutNames a where
-    prettyShowSPrecM :: Monad m => a -> Int -> NameT m ShowS
+    prettyShowSPrecM :: Monad m => a -> Int -> NameT n m ShowS
 
 
 -- | Class for pretty-printing in boolean expression fashing
@@ -91,22 +91,21 @@ rr :: Monad m => (a -> m b) -> m (a -> b)
 -}
 
 instance PrettyBool BooleanValue where
-    prettyPrintBoolAlg :: Monad m => BooleanValue (Int -> ShowS) -> NameT m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanValue (Int -> ShowS) -> NameT n m (Int -> ShowS)
     prettyPrintBoolAlg BTrue = return $ \_ -> showString "⊤"
     prettyPrintBoolAlg BFalse = return $ \_ -> showString "⊥"
 
 instance Render BooleanValue
 
 instance PrettyBool BooleanVariable where
-    prettyPrintBoolAlg :: Monad m => BooleanVariable (Int -> ShowS) -> NameT m (Int -> ShowS)
-    prettyPrintBoolAlg (BVariable i) = do
-        name <- askName i
+    prettyPrintBoolAlg :: Monad m => BooleanVariable (Int -> ShowS) -> NameT n m (Int -> ShowS)
+    prettyPrintBoolAlg (BVariable name) = do
         return $ \_ -> showString name
 
 instance Render BooleanVariable
 
 instance PrettyBool BooleanNot where
-    prettyPrintBoolAlg :: Monad m => BooleanNot (Int -> ShowS) -> NameT m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanNot (Int -> ShowS) -> NameT n m (Int -> ShowS)
     prettyPrintBoolAlg (BNot e) = return $ \d -> showParen (d > prec) $
         showString "¬" . e (prec+1)
         where prec = 10
@@ -114,7 +113,7 @@ instance PrettyBool BooleanNot where
 instance Render BooleanNot
 
 instance PrettyBool BooleanOp where
-    prettyPrintBoolAlg :: Monad m => BooleanOp (Int -> ShowS) -> NameT m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanOp (Int -> ShowS) -> NameT n m (Int -> ShowS)
     prettyPrintBoolAlg (BAnd a b) = return $ \d -> showParen (d > prec) $
         a (prec+1) . showString "∧" . b (prec+1)
         where prec = 6
@@ -160,7 +159,7 @@ instance (PrettyAlmostBool a, PrettyAlmostBool b) => PrettyAlmostBool (Either a 
 -- Instances for boolean literals
 
 instance PrettyBool BooleanLit where
-    prettyPrintBoolAlg :: Monad m => BooleanLit (Int -> ShowS) -> NameT m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanLit (Int -> ShowS) -> NameT n m (Int -> ShowS)
     prettyPrintBoolAlg (BooleanLit i) = do
         let sign = i > 0
         let neg = bool (showString "¬") id sign
@@ -235,7 +234,7 @@ instance ShowConstr Disjunction where
 
 -- Pretty-printer for Conjunction
 instance PrettyBool Conjunction where
-    prettyPrintBoolAlg :: Monad m => Conjunction (Int -> ShowS) -> NameT m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => Conjunction (Int -> ShowS) -> NameT n m (Int -> ShowS)
     prettyPrintBoolAlg (Conjunction ts)
         = return $ showConjs ts where
             showConjs :: [Int -> ShowS] -> Int -> ShowS
@@ -244,7 +243,7 @@ instance PrettyBool Conjunction where
 
 -- Pretty-printer for Disjunction
 instance PrettyBool Disjunction where
-    prettyPrintBoolAlg :: Monad m => Disjunction (Int -> ShowS) -> NameT m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => Disjunction (Int -> ShowS) -> NameT n m (Int -> ShowS)
     prettyPrintBoolAlg (Disjunction ts)
         = return $ showDisjs ts where
             showDisjs :: [Int -> ShowS] -> Int -> ShowS
