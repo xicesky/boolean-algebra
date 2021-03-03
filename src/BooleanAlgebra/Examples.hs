@@ -15,8 +15,8 @@ import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Base.Pretty
 import BooleanAlgebra.Transform.Variable
 import BooleanAlgebra.Transform.Simplify
--- import BooleanAlgebra.Transform.Aggregate
--- import BooleanAlgebra.Transform.CNF
+import BooleanAlgebra.Transform.Aggregate
+import BooleanAlgebra.Transform.CNF
 
 {-----------------------------------------------------------------------------}
 -- Example boolean expressions in varying forms

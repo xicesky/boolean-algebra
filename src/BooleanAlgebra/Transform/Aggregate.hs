@@ -35,6 +35,9 @@ Repeated disjunctions are aggregated into lists (using associativity)
     Disj [] = False
 -}
 
+class Aggregate e f where
+    aggregateConjDisj :: e -> f
+
 -- unCDLit gives us a guaranteed CD term
 -- unCDLit :: BooleanExprCDLit -> BooleanCD BooleanExprCDLit
 -- unCDLit = split unCD unLit where
@@ -90,12 +93,20 @@ instance AggregateOps BooleanOp where
         flat lhs      (Disj r)  = Disj $ pure (injF lhs) <|> r
         flat lhs      rhs       = Disj $ pure (injF lhs) <|> pure (injF rhs)
 
--- This is the actual aggregation function, using a catamorphism
-aggregateConjDisj :: AggregateOps f => Term f -> BooleanExprFlatLit
-aggregateConjDisj = injF . cata aggregateOps
+-- class Aggregate e f where
+--     aggregateConjDisj :: e -> f
 
--- Tiny helper for our old "Either" problem
-aggregateConjDisj' :: AggregateOps f => MaybeTrivial (Term f) -> BooleanExprFlatLit
-aggregateConjDisj' (Left BTrue) = iConjunction empty
-aggregateConjDisj' (Left BFalse) = iDisjunction empty
-aggregateConjDisj' (Right e) = aggregateConjDisj e
+instance AggregateOps f => Aggregate (Term f) BooleanExprFlatLit where
+    -- This is the actual aggregation function, using a catamorphism
+    aggregateConjDisj :: Term f -> BooleanExprFlatLit
+    aggregateConjDisj = injF . cata aggregateOps
+
+instance Aggregate e BooleanExprFlatLit => Aggregate (MaybeTrivial e) BooleanExprFlatLit where
+    aggregateConjDisj :: MaybeTrivial e -> BooleanExprFlatLit
+    aggregateConjDisj (Left BTrue) = iConjunction empty
+    aggregateConjDisj (Left BFalse) = iDisjunction empty
+    aggregateConjDisj (Right e) = aggregateConjDisj e
+
+instance Aggregate e BooleanExprFlatLit => Aggregate ([String], e) ([String], BooleanExprFlatLit) where
+    aggregateConjDisj :: ([String], e) -> ([String], BooleanExprFlatLit)
+    aggregateConjDisj = fmap aggregateConjDisj

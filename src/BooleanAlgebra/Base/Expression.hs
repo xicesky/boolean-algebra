@@ -137,6 +137,9 @@ iTrue = iVal True
 iFalse :: (BooleanValue :<: f) => Cxt h f a
 iFalse = iVal False
 
+iLit ::  (BooleanLit :<: f) => Int -> Cxt h f a
+iLit = iBooleanLit
+
 -- lPos :: String -> BooleanLit a
 -- lPos = BooleanLit True
 

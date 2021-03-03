@@ -11,12 +11,12 @@ import BooleanAlgebra.Support.Arbitrary
 
 import Debug.Trace
 
-prop_nameLiterals_inverts :: BooleanExprLit -> Bool
-prop_nameLiterals_inverts term = let
-    nameMap :: NameMap
-    numberedTerm :: BooleanExprLitI
-    (nameMap, numberedTerm) = numberLiterals term
-    in nameLiterals nameMap numberedTerm == term
+-- prop_nameLiterals_inverts :: BooleanExprLit -> Bool
+-- prop_nameLiterals_inverts term = let
+--     nameMap :: NameMap
+--     numberedTerm :: BooleanExprLitI
+--     (nameMap, numberedTerm) = numberLiterals term
+--     in nameLiterals nameMap numberedTerm == term
 
 -- prop_nameLiterals_inverts_CNF :: CNF -> Bool
 -- prop_nameLiterals_inverts_CNF term = let
@@ -25,9 +25,10 @@ prop_nameLiterals_inverts term = let
 --     (nameMap, numberedTerm) = numberLiterals term
 --     in nameLiterals nameMap numberedTerm == term
 
-spec_nameLiterals = describe "nameLiterals" $ do
-    prop "is the inverse of  'numberLiterals'" prop_nameLiterals_inverts
+-- spec_nameLiterals = describe "nameLiterals" $ do
+--     prop "is the inverse of  'numberLiterals'" prop_nameLiterals_inverts
 
 spec :: Spec
 spec = do
-    spec_nameLiterals
+    --spec_nameLiterals
+    it "doesn't exist anymore" $ pending

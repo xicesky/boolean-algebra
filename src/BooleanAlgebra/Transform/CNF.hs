@@ -18,6 +18,7 @@ import Control.Monad (join)
 import BooleanAlgebra.Util.THUtil
 import BooleanAlgebra.Util.Util
 import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Transform.IntermediateForms
 import BooleanAlgebra.Transform.Simplify
 import BooleanAlgebra.Transform.Aggregate
 
@@ -63,8 +64,15 @@ distributeToCNF = cata distributeDoC
 -- Basic conversion to CNF
 -- doesn't add any variables
 
-toCNF :: SimpBool f => Term f -> CNF
-toCNF = distributeToCNF . aggregateConjDisj' . simplify
+toCNF :: forall f. (SimpBool f
+    , Aggregate ([String], MaybeTrivial BooleanExprLit) ([String], BooleanExprFlatLit))
+    => Term f -> ([String], CNF)
+toCNF e = let
+    simplified :: ([String], MaybeTrivial BooleanExprLit)
+    simplified = simplify e
+    aggregated :: ([String], BooleanExprFlatLit)
+    aggregated = aggregateConjDisj simplified
+    in fmap distributeToCNF aggregated
 
 {-----------------------------------------------------------------------------}
 -- Stats of CNF clauses
