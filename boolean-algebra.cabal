@@ -38,7 +38,6 @@ library
       BooleanAlgebra.Transform.IntermediateForms
       BooleanAlgebra.Transform.Simplify
       BooleanAlgebra.Transform.Variable
-      BooleanAlgebra.Util.Named
       BooleanAlgebra.Util.THUtil
       BooleanAlgebra.Util.Util
       ConstrainedMonadic

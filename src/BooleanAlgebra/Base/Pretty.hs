@@ -15,7 +15,6 @@ import Data.Comp.Derive
 
 import BooleanAlgebra.Util.THUtil
 import BooleanAlgebra.Util.Util
-import BooleanAlgebra.Util.Named
 import BooleanAlgebra.Base.Expression
 
 {-----------------------------------------------------------------------------}
@@ -27,10 +26,13 @@ import BooleanAlgebra.Base.Expression
     Use https://hackage.haskell.org/package/prettyprinter-1.2.0.1#readme
 -}
 
+-- Monad used for pretty-printing
+type PrettyM m = m
+
 -- | Algebra for pretty-printing terms with compdata
 class (Traversable f, Render f) => PrettyBool f where
     -- showsPrec for our pretty printer
-    prettyPrintBoolAlg :: Monad m => AlgM (NameT n m) f (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => AlgM (PrettyM m) f (Int -> ShowS)
 
 -- Lift prettyPrintBoolAlg over sums of functors
 $(deriveLiftSum [''PrettyBool])
@@ -41,7 +43,7 @@ $(deriveLiftSum [''PrettyBool])
 
 -- FIXME: needed ????
 class PrettyWithoutNames a where
-    prettyShowSPrecM :: Monad m => a -> Int -> NameT n m ShowS
+    prettyShowSPrecM :: Monad m => a -> Int -> PrettyM m ShowS
 
 
 -- | Class for pretty-printing in boolean expression fashing
@@ -91,21 +93,21 @@ rr :: Monad m => (a -> m b) -> m (a -> b)
 -}
 
 instance PrettyBool BooleanValue where
-    prettyPrintBoolAlg :: Monad m => BooleanValue (Int -> ShowS) -> NameT n m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanValue (Int -> ShowS) -> PrettyM m (Int -> ShowS)
     prettyPrintBoolAlg BTrue = return $ \_ -> showString "⊤"
     prettyPrintBoolAlg BFalse = return $ \_ -> showString "⊥"
 
 instance Render BooleanValue
 
 instance PrettyBool BooleanVariable where
-    prettyPrintBoolAlg :: Monad m => BooleanVariable (Int -> ShowS) -> NameT n m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanVariable (Int -> ShowS) -> PrettyM m (Int -> ShowS)
     prettyPrintBoolAlg (BVariable name) = do
         return $ \_ -> showString name
 
 instance Render BooleanVariable
 
 instance PrettyBool BooleanNot where
-    prettyPrintBoolAlg :: Monad m => BooleanNot (Int -> ShowS) -> NameT n m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanNot (Int -> ShowS) -> PrettyM m (Int -> ShowS)
     prettyPrintBoolAlg (BNot e) = return $ \d -> showParen (d > prec) $
         showString "¬" . e (prec+1)
         where prec = 10
@@ -113,7 +115,7 @@ instance PrettyBool BooleanNot where
 instance Render BooleanNot
 
 instance PrettyBool BooleanOp where
-    prettyPrintBoolAlg :: Monad m => BooleanOp (Int -> ShowS) -> NameT n m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanOp (Int -> ShowS) -> PrettyM m (Int -> ShowS)
     prettyPrintBoolAlg (BAnd a b) = return $ \d -> showParen (d > prec) $
         a (prec+1) . showString "∧" . b (prec+1)
         where prec = 6
@@ -124,22 +126,22 @@ instance PrettyBool BooleanOp where
 instance Render BooleanOp
 
 -- All our normal terms are pretty-printable
-instance PrettyBool e => PrettyAlmostBool (WithNames (Term e)) where
-    prettyPrintAB :: WithNames (Term e) -> Int -> ShowS
-    prettyPrintAB = runIdentity . withNames (cataM prettyPrintBoolAlg)
-    prettyTree :: WithNames (Term e) -> Tree String
-    prettyTree (nm, t) = stringTree t   -- FIXME names!
+instance PrettyBool e => PrettyAlmostBool (Term e) where
+    prettyPrintAB :: Term e -> Int -> ShowS
+    prettyPrintAB = runIdentity . cataM prettyPrintBoolAlg
+    prettyTree :: Term e -> Tree String
+    prettyTree t = stringTree t
 
 -- Non-recursive terms can be pretty-printed for any param type
 instance PrettyAlmostBool (BooleanValue a) where
     prettyPrintAB :: BooleanValue a -> Int -> ShowS
-    prettyPrintAB = runIdentity . withoutNames . prettyPrintBoolAlg . constmap
+    prettyPrintAB = runIdentity . prettyPrintBoolAlg . constmap
     prettyTree = stringTreeAlg . constmap
 
 -- Non-recursive terms can be pretty-printed for any param type
 instance PrettyAlmostBool (BooleanVariable a) where
     prettyPrintAB :: BooleanVariable a -> Int -> ShowS
-    prettyPrintAB = runIdentity . withoutNames . prettyPrintBoolAlg . constmap
+    prettyPrintAB = runIdentity . prettyPrintBoolAlg . constmap
     prettyTree = stringTreeAlg . constmap
 
 {-----------------------------------------------------------------------------}
@@ -159,21 +161,26 @@ instance (PrettyAlmostBool a, PrettyAlmostBool b) => PrettyAlmostBool (Either a 
 -- Instances for boolean literals
 
 instance PrettyBool BooleanLit where
-    prettyPrintBoolAlg :: Monad m => BooleanLit (Int -> ShowS) -> NameT n m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanLit (Int -> ShowS) -> PrettyM m (Int -> ShowS)
     prettyPrintBoolAlg (BooleanLit i) = do
         let sign = i > 0
         let neg = bool (showString "¬") id sign
-        name <- askName (abs i)
         return $ \_ ->
-            neg . showString name
+            neg . shows (abs i)
 
 instance Render BooleanLit
 
 -- Non-recursive terms can be pretty-printed for any param type
 instance PrettyAlmostBool (BooleanLit a) where
     prettyPrintAB :: BooleanLit a -> Int -> ShowS
-    prettyPrintAB = runIdentity . withoutNames . prettyPrintBoolAlg . constmap
+    prettyPrintAB = runIdentity . prettyPrintBoolAlg . constmap
     prettyTree = stringTreeAlg . constmap
+
+-- When names are provided in addition to the term, we can show them
+-- FIXME later
+instance PrettyAlmostBool a => PrettyAlmostBool ([String], a) where
+    prettyPrintAB (names, a) = prettyPrintAB a
+    prettyTree (names, a) = prettyTree a
 
 {-----------------------------------------------------------------------------}
 -- Instances for aggregate form
@@ -234,7 +241,7 @@ instance ShowConstr Disjunction where
 
 -- Pretty-printer for Conjunction
 instance PrettyBool Conjunction where
-    prettyPrintBoolAlg :: Monad m => Conjunction (Int -> ShowS) -> NameT n m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => Conjunction (Int -> ShowS) -> PrettyM m (Int -> ShowS)
     prettyPrintBoolAlg (Conjunction ts)
         = return $ showConjs ts where
             showConjs :: [Int -> ShowS] -> Int -> ShowS
@@ -243,7 +250,7 @@ instance PrettyBool Conjunction where
 
 -- Pretty-printer for Disjunction
 instance PrettyBool Disjunction where
-    prettyPrintBoolAlg :: Monad m => Disjunction (Int -> ShowS) -> NameT n m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => Disjunction (Int -> ShowS) -> PrettyM m (Int -> ShowS)
     prettyPrintBoolAlg (Disjunction ts)
         = return $ showDisjs ts where
             showDisjs :: [Int -> ShowS] -> Int -> ShowS
@@ -261,10 +268,10 @@ instance Render Disjunction
 -- Idea: Maybe print each disjunction on a seperate line
 instance PrettyAlmostBool a => PrettyAlmostBool (Conjunction a) where
     prettyPrintAB :: Conjunction a -> Int -> ShowS
-    prettyPrintAB = runIdentity . withoutNames . prettyPrintBoolAlg . fmap prettyPrintAB
+    prettyPrintAB = runIdentity . prettyPrintBoolAlg . fmap prettyPrintAB
     prettyTree = stringTreeAlg . fmap prettyTree
 
 instance PrettyAlmostBool a => PrettyAlmostBool (Disjunction a) where
     prettyPrintAB :: Disjunction a -> Int -> ShowS
-    prettyPrintAB = runIdentity . withoutNames . prettyPrintBoolAlg . fmap prettyPrintAB
+    prettyPrintAB = runIdentity . prettyPrintBoolAlg . fmap prettyPrintAB
     prettyTree = stringTreeAlg . fmap prettyTree

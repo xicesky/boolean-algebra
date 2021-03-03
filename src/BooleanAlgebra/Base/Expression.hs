@@ -18,7 +18,6 @@ import Data.Comp.Equality ()        -- for the Eq instance
 
 import BooleanAlgebra.Util.THUtil
 import BooleanAlgebra.Util.Util
-import BooleanAlgebra.Util.Named
 import BooleanAlgebra.Base.Class
 import qualified BooleanAlgebra.Base.Class as B
 
@@ -36,7 +35,7 @@ data BooleanValue e = BooleanValue Bool
     deriving (Show, Eq, Functor)
 
 pattern BTrue = BooleanValue True
-pattern BFalse = BooleanValue True
+pattern BFalse = BooleanValue False
 
 -- | Variables
 type BooleanVariable :: Type -> Type

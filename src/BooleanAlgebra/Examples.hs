@@ -1,6 +1,8 @@
 
 module BooleanAlgebra.Examples where
 
+import Prelude hiding (and, or, not, (&&), (||))
+
 import Control.Monad.Except
 
 import Data.Comp.Term
@@ -8,25 +10,26 @@ import Data.Comp.Ops
 
 import Container
 
+import BooleanAlgebra.Base.Class
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Base.Pretty
 import BooleanAlgebra.Transform.Variable
 import BooleanAlgebra.Transform.Simplify
-import BooleanAlgebra.Transform.Aggregate
-import BooleanAlgebra.Transform.CNF
+-- import BooleanAlgebra.Transform.Aggregate
+-- import BooleanAlgebra.Transform.CNF
 
 {-----------------------------------------------------------------------------}
 -- Example boolean expressions in varying forms
 
 -- | A simple boolean expression in variables @x@, @y@ and @z@.
 exampleExpr01 :: BooleanExpr
-exampleExpr01 = iBNot (iBVar "x" `iBAnd` iBVar "y") `iBAnd` iBVar "z"
+exampleExpr01 = not (var "x" `and` var "y") `and` var "z"
 
 -- | A constant boolean expression.
 --
 -- >>> printBool $ simplify $ exampleExpr02
 exampleExpr02 :: BooleanExpr
-exampleExpr02 = iBNot (iBNot iBTrue `iBAnd` iBNot iBFalse)
+exampleExpr02 = not (not true `and` not false)
  
 {-| Boolean expression in conjunctive normal form.
 
@@ -34,7 +37,7 @@ aggregateConjDisj' doesn't have a lot of work here:
 >>> printBool $ aggregateConjDisj' $ simplify $ exampleExpr03
 -}
 exampleExpr03 :: BooleanExpr
-exampleExpr03 = (iBVar "a" `iBOr` iBVar "b") `iBAnd` (iBVar "c" `iBOr` iBVar "d")
+exampleExpr03 = (var "a" `or` var "b") `and` (var "c" `or` var "d")
 
 {-| Boolean expression in disjunctive normal form.
 
@@ -42,7 +45,7 @@ aggregateConjDisj' will result in nested CDs:
 >>> printBool $ aggregateConjDisj' $ simplify $ exampleExpr04
 -}
 exampleExpr04 :: BooleanExpr
-exampleExpr04 = (iBVar "a" `iBAnd` iBVar "b") `iBOr` (iBVar "c" `iBAnd` iBVar "d")
+exampleExpr04 = (var "a" `and` var "b") `or` (var "c" `and` var "d")
 
 -- exampleExprCD :: BooleanExprCDLit
 -- exampleExprCD = iBooleanCD [ [ iPos "a", iNeg "b" ], [ iNeg "c", iPos "d" ] ]
@@ -53,13 +56,17 @@ Try it yourself:
 >>> printBool $ toCNF $ exampleExpr05
 -}
 exampleExpr05 :: BooleanExpr
-exampleExpr05 = iBNot $ 
-    (iBNot (iBVar "a") `iBOr` iBVar "b")
-    `iBAnd` iBNot (iBVar "c" `iBAnd` iBVar "d")
+exampleExpr05 = not $ 
+    (not (var "a") `or` var "b")
+    `and` not (var "c" `and` var "d")
+
+{-  FIXME: use naming monad to create?
 
 -- | An example of the 'CNF' type
 exampleCNF :: CNF
 exampleCNF = cnfFromList [ [ lPos "a", lNeg "b" ], [ lNeg "c", lPos "d" ] ]
+
+-}
 
 {-----------------------------------------------------------------------------}
 -- Example substitutions on variables
@@ -68,7 +75,7 @@ exampleCNF = cnfFromList [ [ lPos "a", lNeg "b" ], [ lNeg "c", lPos "d" ] ]
 exampleSubst01 :: BooleanExpr -> BooleanExpr
 exampleSubst01 = substVar hom where
     hom :: BooleanVariable a -> Context BooleanBaseF a
-    hom (BVariable s) = iBVar $ 'z' : s
+    hom (BVariable s) = iBVariable $ 'z' : s
 
 -- | Base functor without variables
 type BooleanBaseNoVarsF
@@ -87,7 +94,7 @@ type BooleanExprNoVars = Term BooleanBaseNoVarsF
 exampleSubst02 :: BooleanExpr -> BooleanExprNoVars
 exampleSubst02 = substVar hom where
     hom :: BooleanVariable a -> Context BooleanBaseNoVarsF a
-    hom (BVariable s) = iBTrue
+    hom (BVariable s) = iBooleanValue True
 
 {- | Replace variables with another term from an environment (map)
 
@@ -98,8 +105,8 @@ exampleSubst03 :: BooleanExpr -> BooleanExpr
 exampleSubst03 = substitute' env where
     env :: HashMap String BooleanExpr
     env = fromList
-        [   ("a",   iBNot (iBVar "a")   )
-        ,   ("c",   iBFalse             )
+        [   ("a",   not (var "a")       )
+        ,   ("c",   false               )
         ]
 
 {- | Eliminate variables by substituting values
@@ -111,10 +118,10 @@ exampleSubst04 :: BooleanExpr -> BooleanExprNoVars
 exampleSubst04 term = let
     env :: HashMap String BooleanExprNoVars
     env = fromList
-        [   ("a",   iBTrue              )
-        ,   ("b",   iBFalse             )
-        ,   ("c",   iBFalse             )
-        ,   ("d",   iBFalse             )
+        [   ("a",   iBooleanValue True  )
+        ,   ("b",   iBooleanValue False )
+        ,   ("c",   iBooleanValue False )
+        ,   ("d",   iBooleanValue False )
         ]
     err :: String -> Except String (Context g a)
     err s = throwError $ "Unmapped variable " ++ s

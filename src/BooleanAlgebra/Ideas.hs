@@ -6,7 +6,6 @@ import Data.Comp.Ops
 import Data.Comp.Render
 
 import BooleanAlgebra.Util.THUtil
-import BooleanAlgebra.Util.Named
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Base.Pretty
 
@@ -48,7 +47,7 @@ bExtOpSymbol BNor = "⊽"
 bExtOpSymbol BXnor = "⊙"
 
 instance PrettyBool BooleanExtOp where
-    prettyPrintBoolAlg :: Monad m => BooleanExtOp (Int -> ShowS) -> NameT m (Int -> ShowS)
+    prettyPrintBoolAlg :: Monad m => BooleanExtOp (Int -> ShowS) -> PrettyM m (Int -> ShowS)
     prettyPrintBoolAlg (BooleanExtOp op a b) = return $ \d -> showParen (d > prec) $
         a (prec+1) . showString (bExtOpSymbol op) . b (prec+1)
         where prec = 9

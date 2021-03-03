@@ -1,7 +1,15 @@
 
 module BooleanAlgebra.Transform.Simplify where
 
+import Prelude hiding ((!!), lookup)
+
 import Data.Bool (bool)
+import Data.Functor.Identity (Identity(..))
+import Control.Monad.Reader
+
+import Container
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.HashSet as HashSet
 
 import Data.Comp
 import Data.Comp.Derive
@@ -10,6 +18,8 @@ import BooleanAlgebra.Util.THUtil
 import BooleanAlgebra.Util.Util
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Transform.IntermediateForms
+
+import BooleanAlgebra.Transform.Variable
 
 {-----------------------------------------------------------------------------}
 -- Simplifier   (Step 1 of toCNF)
@@ -62,37 +72,60 @@ simplifyPrimitive = cata simpBool
 -- Boolean literals     (Step 2 of toCNF)
 -- Literal = Variable + optional Negation
 
+-- | Monad used for the transformation
+type PushNegM m = ReaderT (String -> Int) m
+    -- (String -> Int) -> Bool -> m a
+
+-- Tiny little helper
+-- withPNM :: Monad m => ((String -> Int) -> Bool -> PushNegM m a) -> PushNegM m a
+-- withPNM f = do
+--     (r, n) <- ask
+--     f r n
+
 -- pushNeg eliminates negations by pushing them inwards
 -- and turning variables into literals
-class Functor f => PushNeg f where
-    pushNeg :: Alg f (Bool -> BooleanExprLit)
+class (Functor f, Traversable f) => PushNeg f where
+    pushNeg :: Monad m => AlgM (PushNegM m) f (Bool -> BooleanExprLit)
 
 -- Lift pushNeg over sums of functors
 $(deriveLiftSum [''PushNeg])
 
 instance PushNeg BooleanVariable where
-    pushNeg :: BooleanVariable (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
-    pushNeg (BVariable s) positive = iBooleanLit $ bool (-s) s positive
+    --pushNeg :: BooleanVariable (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
+    pushNeg :: Monad m => AlgM (PushNegM m) BooleanVariable (Bool -> BooleanExprLit)
+    pushNeg (BVariable s) = do
+        resolve <- ask
+        let (i :: Int) = resolve s
+        return $ \positive -> iBooleanLit $ bool (-i) i positive
 
 instance PushNeg BooleanNot where
-    pushNeg :: BooleanNot (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
-    pushNeg (BNot lit) positive = lit (not positive)
+    pushNeg :: Monad m => AlgM (PushNegM m) BooleanNot (Bool -> BooleanExprLit)
+    pushNeg (BNot lit) = return $ \positive -> lit (not positive)
 
 instance PushNeg BooleanOp where
-    pushNeg :: BooleanOp (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
-    pushNeg (BAnd a b) False = iBOr (a False) (b False)
-    pushNeg (BAnd a b) True  = iBAnd (a True) (b True)
-    pushNeg (BOr a b) False = iBAnd (a False) (b False)
-    pushNeg (BOr a b) True  = iBOr (a True) (b True)
+    --pushNeg :: BooleanOp (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
+    pushNeg :: Monad m => AlgM (PushNegM m) BooleanOp (Bool -> BooleanExprLit)
+    pushNeg (BAnd a b) = return $ \case
+        False   -> iBOr  (a False) (b False)
+        True    -> iBAnd (a True)  (b True)
+    pushNeg (BOr a b) = return $ \case
+        False   -> iBAnd (a False) (b False)
+        True    -> iBOr  (a True)  (b True)
+
+pushNegationsM :: (Monad m, PushNeg f, BooleanVariable :<: f) => Term f -> m ([String], BooleanExprLit)
+pushNegationsM e = do
+    let (names, map) = makeVariableMap e
+    f <- runReaderT (cataM pushNeg e) (map !!)
+    return (names, f True)
 
 -- Idea: PushNeg can operate on extended operation (see below)
-pushNegations :: PushNeg f => Term f -> BooleanExprLit
-pushNegations e = cata pushNeg e True
+pushNegations :: (PushNeg f, BooleanVariable :<: f) => Term f -> ([String], BooleanExprLit)
+pushNegations = runIdentity . pushNegationsM
 
 -- We usually want to apply it to BooleanExprSimp directly
 -- usage e.g.: prettyBool $ pushNegations' $ simplifyPrimitive $ exampleExpr05
-pushNegations' :: PushNeg f => MaybeTrivial (Term f) -> MaybeTrivial BooleanExprLit
-pushNegations' = fmap pushNegations
+pushNegations' :: (PushNeg f, BooleanVariable :<: f) => MaybeTrivial (Term f) -> ([String], MaybeTrivial BooleanExprLit)
+pushNegations' = traverse pushNegations
 
 {- TODO:
 Maybe pushNegations can be decomposed into two functions
@@ -108,5 +141,5 @@ TODO: Function to turn literals back into BooleanVariable :+: BooleanNot
 {-----------------------------------------------------------------------------}
 -- Complete simplification step
 
-simplify :: SimpBool f => Term f -> MaybeTrivial BooleanExprLit
+simplify :: SimpBool f => Term f -> ([String], MaybeTrivial BooleanExprLit)
 simplify = pushNegations' . simplifyPrimitive

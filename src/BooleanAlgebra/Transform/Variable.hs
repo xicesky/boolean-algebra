@@ -7,10 +7,10 @@ import Prelude hiding (lookup, (!!))
 import Data.Tuple (swap)
 import Data.Bool (bool)
 import Data.Void
-import Control.Monad.Reader
-import Data.Functor.Identity (Identity(..))
 import Data.Foldable
-import qualified Data.HashMap.Lazy as HashMap
+import Data.Functor.Identity (Identity(..))
+import Control.Monad.Reader
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.HashSet as HashSet
 
 import Data.Comp.Term
@@ -22,7 +22,6 @@ import Data.Comp.Generic (subterms')
 import Container
 
 import BooleanAlgebra.Util.THUtil
-import BooleanAlgebra.Util.Named
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Transform.IntermediateForms
 
@@ -30,33 +29,43 @@ import BooleanAlgebra.Transform.IntermediateForms
 
 class HasVariables t where
     -- | Fetch the names of all the variables
-    variableNumbers :: t -> HashSet Int
-    variableNames :: WithNames t -> HashSet String
-    variableNames (nm, t) = (fromList . fmap (nm !!) . toList) (variableNumbers t)  -- FIXME?
+    variableNames :: t -> HashSet String
 
--- class HasLiterals t where
--- numberedLiterals :: forall f. (Foldable f, BooleanLitI :<: f) =>
---     Term f -> HashSet Int
--- numberedLiterals = fromList . fmap unLit . subterms'
+class HasLiterals t where
+    literals :: t -> HashSet Int
+    absLiterals :: t -> HashSet Int
+    absLiterals = HashSet.map abs . literals
+
+makeVariableMap :: HasVariables t => t -> ([String], HashMap String Int)
+makeVariableMap t = let
+    list :: [String]
+    list = HashSet.toList $ variableNames t
+    map :: HashMap String Int
+    map = HashMap.fromList $ zip list [1..]
+    in (list, map)
 
 {-----------------------------------------------------------------------------}
 
+variableNamesDefault :: forall f. (Foldable f, BooleanVariable :<: f) =>
+    Term f -> HashSet String
+variableNamesDefault = fromList . fmap unVar . subterms'
+
 -- -- | Fetch the names of all the literals
--- literalNamesDefault :: forall f. (Foldable f, BooleanLit :<: f) =>
---     Term f -> HashSet String
--- literalNamesDefault = fromList . fmap litName . subterms'
+literalNamesDefault :: forall f. (Foldable f, BooleanLit :<: f) =>
+    Term f -> HashSet Int
+literalNamesDefault = fromList . fmap unLit . subterms'
 
 instance (Foldable f, BooleanVariable :<: f) => HasVariables (Term f) where
     variableNames = variableNamesDefault
 
-instance HasVariables BooleanExprLit where
-    variableNames = literalNamesDefault
+instance HasLiterals BooleanExprLit where
+    literals = literalNamesDefault
 
-instance HasVariables BooleanExprFlatLit where
-    variableNames = literalNamesDefault
+instance HasLiterals BooleanExprFlatLit where
+    literals = literalNamesDefault
 
-instance HasVariables CNF where
-    variableNames = fromList . fmap litName . (toList <=< toList)
+instance HasLiterals CNF where
+    literals = fromList . fmap unLit . (toList <=< toList)
 
 {-----------------------------------------------------------------------------}
 -- Variable substitution
@@ -123,10 +132,10 @@ substVar hom f = runIdentity $ substVarM (liftHom hom) f
 -- Flexible monadic version
 substituteM :: forall f g m map.
     ( Traversable f, Functor g, Monad m
-    , MapLike map, (Int, Term g) ~ ElemT map        -- Keys are Int, Values are Terms
+    , MapLike map, (String, Term g) ~ ElemT map     -- Keys are Strings, Values are Terms
     , SubstVar f g
     ) => map                                        -- Maps names to new terms
-    -> (forall a. Int -> m (Context g a))           -- Action on unmapped variables
+    -> (forall a. String -> m (Context g a))        -- Action on unmapped variables
     -> Term f                                       -- Term to transform
     -> m (Term g)
 substituteM map err = substVarM hom where
@@ -140,7 +149,7 @@ substituteM map err = substVarM hom where
 -- Partial substitution (leaves unmapped variables in place)
 substituteM' :: forall f m map.
     ( Traversable f, Monad m
-    , MapLike map, (Int, Term f) ~ ElemT map
+    , MapLike map, (String, Term f) ~ ElemT map
     , SubstVar f f
     , BooleanVariable :<: f
     ) => map
@@ -153,7 +162,7 @@ substituteM' map = substituteM map (return . iBVariable)
 -- Non-monadic version of 'substituteM''
 substitute' :: forall f map.
     ( Traversable f
-    , MapLike map, (Int, Term f) ~ ElemT map
+    , MapLike map, (String, Term f) ~ ElemT map
     , SubstVar f f
     , BooleanVariable :<: f
     ) => map
