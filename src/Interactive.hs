@@ -7,9 +7,7 @@ module Interactive where
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary
 
---import BooleanAlgebra
-import BooleanAlgebra.Base.Pretty
-import BooleanAlgebra.Transform.Simplify
+import BooleanAlgebra
 import BooleanAlgebra.Examples
 import BooleanAlgebra.Transform.IntermediateForms
 
