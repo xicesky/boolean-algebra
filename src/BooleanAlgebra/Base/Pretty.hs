@@ -1,5 +1,15 @@
 
-module BooleanAlgebra.Base.Pretty where
+{- |
+Description     : Pretty-printer
+Stability       : experimental
+
+Not yet implemented!
+-}
+module BooleanAlgebra.Base.Pretty
+    (   -- * Temporary replacements
+        prettyBool, printBool
+
+    ) where
 
 {-----------------------------------------------------------------------------}
 -- TODO !!

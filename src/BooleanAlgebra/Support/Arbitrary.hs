@@ -2,9 +2,28 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
--- | 'Arbitrary' instances for QuickCheck usage
+{- |
+Description     : Generators for QuickCheck
+Stability       : experimental
 
-module BooleanAlgebra.Support.Arbitrary where
+This module provides instances of 'Arbitrary' for terms and
+various generates for use with QuickCheck.
+-}
+module BooleanAlgebra.Support.Arbitrary
+    (   -- * Terms
+        generateBA
+    ,   generateTerm
+
+    ,   -- * Variable assignments
+        generateMapping
+    ,   generateMapping'
+    ,   tryGenerateMapping
+
+        -- * Other utilities
+    ,   generateVarName
+    ,   chooseBs
+
+    ) where
 
 import Prelude hiding (and, or, not, (&&), (||))
 
@@ -89,6 +108,7 @@ generateTerm size vars vals = term size where
         n   | even n -> and <$> term (size `div` 2) <*> term (size `div` 2)
         n   | odd n  -> or  <$> term (size `div` 2) <*> term (size `div` 2)
 
+-- | Generate a random variable name
 generateVarName :: Gen String
 generateVarName = do
     l <- (`div` 10) <$> getSize
@@ -96,6 +116,7 @@ generateVarName = do
 -- generateVarName = getPrintableString <$> arbitrary
 -- generateVarName = getUnicodeString <$> arbitrary
 
+-- | Generate any instance of BooleanAlgebra
 generateBA :: forall b. BooleanAlgebra b => Gen b
 generateBA = do
     n <- getSize
@@ -130,5 +151,5 @@ instance Arbitrary (BooleanExpr String) where
 --                 t1
 
 -- instance Arbitrary (Named CNF) where
---     arbitrary = scale (`div` 2) $ 
+--     arbitrary = scale (`div` 2) $
 --         toNamed . toCNF <$> (arbitrary :: Gen BooleanExpr)

@@ -1,5 +1,21 @@
 
-module BooleanAlgebra.Base.Logic where
+{- |
+Description     : Logic on boolean predicates
+Stability       : experimental
+
+-}
+module BooleanAlgebra.Base.Logic
+    (   -- * Quantifiers
+        forAll
+    ,   exists
+    ,   existsUnique
+    ,   existsUnique'
+
+    ,   -- * Misc operations
+        excludes, implies, iff
+    ,   given, is
+
+    ) where
 
 import Prelude hiding (and, or, not, (&&), (||))
 

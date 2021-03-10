@@ -1,4 +1,10 @@
 
+{- |
+Description     : Various examples
+Stability       : experimental
+
+Example expressions and demonstations.
+-}
 module BooleanAlgebra.Examples where
 
 import Prelude hiding (and, or, not, (&&), (||))
@@ -26,7 +32,7 @@ exampleExpr01 = not (var "x" `and` var "y") `and` var "z"
 -- >>> printBool $ simplify $ exampleExpr02
 exampleExpr02 :: BooleanExpr String
 exampleExpr02 = not (not true `and` not false)
- 
+
 {-| Boolean expression in conjunctive normal form.
 
 aggregateConjDisj' doesn't have a lot of work here:
@@ -52,7 +58,7 @@ Try it yourself:
 >>> printBool $ toCNF $ exampleExpr05
 -}
 exampleExpr05 :: BooleanExpr String
-exampleExpr05 = not $ 
+exampleExpr05 = not $
     (not (var "a") `or` var "b")
     `and` not (var "c" `and` var "d")
 

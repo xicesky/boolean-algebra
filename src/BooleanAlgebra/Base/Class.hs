@@ -2,15 +2,35 @@
 {-# LANGUAGE PatternSynonyms        #-}
 {-# LANGUAGE DefaultSignatures      #-}
 
-{- | Generalized boolean algebras.
+{- |
+Description     : Generalized boolean algebras
+Stability       : experimental
 
-When using this, consider hiding parts of the prelude:
+When using this module, consider hiding parts of the prelude:
 
 >>> import Prelude hiding (and, or, not, (&&), (||))
 >>> import qualified Prelude as P
 
 -}
-module BooleanAlgebra.Base.Class where
+module BooleanAlgebra.Base.Class
+    (   -- * Classes for booleans and boolean algebras
+        PreBoolean(..)
+    ,   Boolean(..)
+    ,   BooleanArithmetic(..)
+    ,   BooleanPreAlgebra(..)
+    ,   BooleanAlgebra(..)
+
+    ,   -- * Boolean operators
+        (&&), (||)
+
+    ,   -- * Utility functions
+        truth, falsity
+
+    ,   -- * Interpretable terms
+        InterpretBooleanArithmetic(..)
+    ,   InterpretBooleanAlgebra(..)
+
+    ) where
 
 import Prelude hiding (and, or, not, (&&), (||))
 import qualified Prelude as P

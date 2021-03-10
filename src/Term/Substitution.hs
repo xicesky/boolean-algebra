@@ -1,4 +1,12 @@
 
+
+{- |
+Description     : Variable substitution
+Stability       : experimental
+
+Utility for substituting variables with arbitrary terms
+(of the same type).
+-}
 module Term.Substitution
     (   substVars
     ) where

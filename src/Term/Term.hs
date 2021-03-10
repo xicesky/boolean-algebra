@@ -1,27 +1,33 @@
 
 {-# LANGUAGE PatternSynonyms #-}
 
-{- | Generalized algebraic terms.
+{- |
+Description     : General term represenation
+Stability       : experimental
 
 These terms do /not/ support variable binders (like lambdas) - but they
 can compose arbitrary unary and binary operators, variable names and values.
 
 -}
 module Term.Term
-    (   Fix4(..)
-    ,   TermF(..)
-    ,   Term
+    (   -- * General terms
+        Term
     ,   Op(..)
 
-    ,   pattern Val
+    ,   -- * Recursion-schemes
+        Fix4(..)
+    ,   TermF(..)
+
+    ,   -- * Pattern synonyms
+        pattern Val
     ,   pattern Var
     ,   pattern Rec
     ,   pattern BUOp
     ,   pattern BBOp
     ,   pattern BFlOp
 
-    -- Kill with fire?
-    ,   ProperRecT(..)
+    ,    -- * Dirty details
+        ProperRecT(..)
     ,   ProperOpTag(..)
     ) where
 
@@ -40,7 +46,7 @@ import Missing.Void
 {-----------------------------------------------------------------------------}
 -- Terms, part 0: Fixpoint
 
--- Fixpoint
+-- | Fixpoint type for 'Functor's of 4rth order.
 newtype Fix4 f a b c = Fix4 { unFix4 :: f a b c (Fix4 f a b c) }
 
 -- FIXME: Fix4 can actually even be an instance of Show2
@@ -79,8 +85,15 @@ instance (Functor (f a b c), IsoVoid (f a b c Void)) => IsoVoid (Fix4 f a b c) w
 Solve this by removing the class alltogether and augmenting all the
 type signatures.
 -}
+
+-- | A class for proper operator implementations
 class (Show1 op, Eq1 op, Functor op, Foldable op, Traversable op) => ProperRecT op where
 
+{- | Base functor for the general term representation.
+
+This type is usually only encountered when using the recursion
+functions from 'recursion-schemes'.
+-}
 data TermF
     :: (Type -> Type) -> Type -> Type       -- Type parameters
     -> Type                                 -- Recursive term
@@ -141,6 +154,13 @@ instance IsoVoid (op Void) => IsoVoid (TermF op Void Void Void) where
 
 {-----------------------------------------------------------------------------}
 
+{- | General term representation.
+
+A @Term op val var@ has operators of type @op@, holds values of type @val@
+and variables of type @var@. Any of those tags can be set to 'Void' to
+disable the corresponding variant, e.g. @Term op Void var@ hold no constant
+values, but may hold variables and operators.
+-}
 type Term = Fix4 TermF
 
 instance Foldable (Term op val) where
@@ -179,6 +199,14 @@ instance Monad (Term op val) where
 {-----------------------------------------------------------------------------}
 -- Terms, part 2: Operators
 
+{- | General operator representation.
+
+A @Op uop bop flop@ has /unary/ operators of type @uop@, binary operators of
+type @bop@ and flattened (arbitrary arity) operators of type @flop@.
+
+Similarly to 'Term', any of those tags can be set to 'Void' to
+disable the corresponding variant.
+-}
 data Op
     :: Type -> Type -> Type -> Type -> Type
     where

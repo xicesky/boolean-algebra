@@ -1,9 +1,20 @@
 
+{- |
+Description     : Evaluation tools
+Stability       : experimental
+
+This module provides instances an evaluation function 'eval' and
+tools to compare terms under evaluation (for use with QuickCheck).
+-}
 module BooleanAlgebra.Support.Eval
-    (   Eval(..)
-    ,   equalEval
+    (   -- * Evaluating terms
+        Eval(..)
+
+    ,   -- * Testing term equality
+        equalEval
     ,   propEqual
     ,   propImplies
+
     ) where
 
 import Prelude hiding (and, or, not, (&&), (||))

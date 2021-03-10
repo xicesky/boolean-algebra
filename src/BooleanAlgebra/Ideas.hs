@@ -44,7 +44,7 @@ bExtOpSymbol BXnor = "⊙"
 -- SAT Solver
 -- solves boolean expressions in CNF
 
-{- 
+{-
 Idea: Preserve annotations, so we can transform them back to
 arbitrary expressions for general constraint solving
 -}

@@ -1,14 +1,17 @@
 
 {-# LANGUAGE UndecidableInstances   #-}
 
-{- | Safe injection.
+{- |
+Description     : Safe injection
+Stability       : experimental
 
-This module leverages some type family /magic/ to safely
+This module leverages some /type family magic/ to safely
 inject from terms to other terms.
 -}
-module Term.Inject 
+module Term.Inject
     (   (:<:)
     ,   inject
+    ,   GInject(..)
     ) where
 
 import GHC.TypeLits (TypeError(..), ErrorMessage(..))
@@ -63,6 +66,7 @@ type family FindInjection1 (s :: Type -> Type) (t :: Type -> Type) :: Injection 
         ,   FindInjection var var'
         ]
 
+-- | Type-family guided injection.
 class GInject s t (i :: Injection) where
     gInject :: Proxy i -> s -> t
 

@@ -1,5 +1,25 @@
 
-module BooleanAlgebra.Transform.CNF where
+{- |
+Description     : Conjunctive normal form
+Stability       : experimental
+
+Transformations to CNF (conjunctive normal form), e.g. for
+using a SAT-solver.
+
+-}
+module BooleanAlgebra.Transform.CNF
+    (   -- * Transformation to CNF
+        toCNF, toCNF2
+
+    ,   -- * Stats for CNF
+        CNFStats(..), cnfStats
+
+    ,   -- * Explicit CNF transforms
+        distributeToCNF
+    ,   tseitinTransformM
+    ,   tseitinTransform'
+
+    ) where
 
 import Prelude hiding (and, or, not, (&&), (||))
 
@@ -142,8 +162,16 @@ tseitinTransform' t = let
     result :: (CNF Int, MappedNames String)
     result = runIdentity $ runFreshT (tseitinTransformM iterm) nmap
     (cnf, (iton, _)) = result
-    in fmap (iton Map.!) cnf 
+    in fmap (iton Map.!) cnf
 
+{- | Transformation to CNF
+
+This uses the tseitin transformation and will thus create new variables.
+The result is solveable /exactly if/ the original expression is solvable.
+
+The number of clauses generated is linear in the size of the original
+expression.
+-}
 toCNF2 :: Term BOps Bool String -> CNF String
 toCNF2 term = case constantFold term of
     Left True   -> CNF $ Conjunction []

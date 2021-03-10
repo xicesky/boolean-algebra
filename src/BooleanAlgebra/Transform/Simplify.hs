@@ -1,5 +1,25 @@
 
-module BooleanAlgebra.Transform.Simplify where
+{- |
+Description     : Simplifier for boolean terms
+Stability       : experimental
+
+-}
+module BooleanAlgebra.Transform.Simplify
+    (   -- * Constant folding
+        constantFold
+    ,   constantFold'
+
+    ,   -- * Simplification
+        simplify
+
+    ,   -- * Pushing negations
+        pushNegations'
+
+    ,   -- * Flattening
+        flatten
+    ,   flatten'
+
+    ) where
 
 --import Prelude hiding ((!!), lookup)
 
@@ -19,9 +39,9 @@ import BooleanAlgebra.Base.Expression
 {-----------------------------------------------------------------------------}
 -- Constant folding
 
+-- TODO: Create a version that works on flattened terms.
 {- | Fold constants in a term.
 
-TODO: Create a version that works on flattened terms.
 -}
 constantFold' :: Term BOps Bool a -> Either Bool (Term BOps Void a)
 constantFold' = cata fRec where
@@ -44,12 +64,16 @@ constantFold' = cata fRec where
     fRec (RecT (FlatOp op _)) = absurd op
 
 -- Generalized to arbitrary inputs
+{- | Fold constants in a term.
+
+-}
 constantFold :: (t a :<: Term BOps Bool a) => t a -> Either Bool (Term BOps Void a)
 constantFold = constantFold' . inject
 
 {-----------------------------------------------------------------------------}
 -- Push negations up to variables, creating literals
 
+-- | Push negations up to variables, creating literals
 pushNegations' :: Term BOps Void a -> TermLit BNOps Void a
 pushNegations' term = cata pushNeg term True where
     pushNeg :: Alg (TermF BOps Void a) (Bool -> TermLit BNOps Void a)
@@ -88,7 +112,7 @@ flatten' = cata flat where
 Sometimes GHC will try to fix 'val' and 'var' to arbitrary types. You can avoid
 that by using type applications, e.g.:
 
->>> flatten @Bool @String $ constantFold demo2b
+>>> flatten @Bool @String $ constantFold demoTerm
 -}
 flatten :: forall val var t. (t :<: Term BNOps val var) => t -> Term BFlOps val var
 flatten = flatten' . inject
@@ -97,6 +121,12 @@ flatten = flatten' . inject
 -- Simplifier
 -- Doesn't currently simplify a lot
 
+{- | Simplify a boolean expression.
+
+Currently only does constant folding, literals and flattening - i.e.
+the minimum work to transform into CNF.
+
+-}
 simplify :: (t a :<: Term BOps Bool a) => t a -> TermLit BFlOps Void a
 simplify term = case constantFold term of
     Left True -> TermLit $ BConj []

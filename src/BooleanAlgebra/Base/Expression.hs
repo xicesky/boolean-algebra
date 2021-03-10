@@ -1,7 +1,38 @@
 
 {-# LANGUAGE PatternSynonyms        #-}
 
-module BooleanAlgebra.Base.Expression where
+{- |
+Description     : Boolean algebra datatype
+Stability       : experimental
+
+-}
+module BooleanAlgebra.Base.Expression
+    (   -- * Terms and operations
+        BOps, BFlOps, BNOps
+    ,   BooleanExpr
+    ,   invertOp
+
+    ,   -- * Literals
+        Literal
+    ,   TermLit(..)
+    ,   substVarsL
+
+    ,   -- * Clauses and CNF
+        Conjunction(..), Disjunction(..)
+    ,   CNF(..)
+    ,   distributeDisjunction
+    ,   joinConjunction
+    ,   joinDisjunction
+
+    ,   -- * Operation tags
+        BooleanUOp(..), BooleanBOp(..), BooleanFlatOp(..)
+
+    ,   -- * Pattern synonyms
+        pattern BNot, pattern BAnd, pattern BOr
+    ,   pattern BConj, pattern BDisj
+    ,   pattern Lit
+
+    ) where
 
 import Prelude hiding (and, or, not, (&&), (||))
 import qualified Prelude as P

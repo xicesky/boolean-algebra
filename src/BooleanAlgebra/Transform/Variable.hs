@@ -2,15 +2,27 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 -- FIXME: Most of this is not specific to BooleanAlgebra, move to Term
+
+{- |
+Description     : Variable name handling
+Stability       : experimental
+
+_WIP_: This module is work in progress.
+-}
 module BooleanAlgebra.Transform.Variable
-    (   HasNames(..)
-    ,   MappedNames(..)
+    (   -- * Collecting variable names
+        HasNames(..)
+
+    ,   -- * Name maps
+        MappedNames(..)
     ,   Context(..)
     ,   getNameMap
     ,   getIndexMap
     ,   buildContext
     ,   destroyContext
-    ,   findFreshName
+
+    ,   -- * Creating fresh names
+        findFreshName
     ,   FreshState
     ,   MonadFresh(..)
     ,   FreshT
