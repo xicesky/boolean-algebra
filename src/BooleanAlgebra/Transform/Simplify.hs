@@ -1,145 +1,106 @@
 
 module BooleanAlgebra.Transform.Simplify where
 
-import Prelude hiding ((!!), lookup)
+--import Prelude hiding ((!!), lookup)
 
+import Data.Kind (Type)
+import Data.Void
 import Data.Bool (bool)
-import Data.Functor.Identity (Identity(..))
-import Control.Monad.Reader
 
-import Container
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.HashSet as HashSet
+-- recursion-schemes
+import Data.Functor.Foldable
 
-import Data.Comp
-import Data.Comp.Derive
+import Missing.Misc (Alg)
+import Term.Term
+import Term.Inject
 
-import BooleanAlgebra.Util.THUtil
-import BooleanAlgebra.Util.Util
 import BooleanAlgebra.Base.Expression
-import BooleanAlgebra.Transform.IntermediateForms
-
-import BooleanAlgebra.Transform.Variable
 
 {-----------------------------------------------------------------------------}
--- Simplifier   (Step 1 of toCNF)
+-- Constant folding
 
-{- simpBool pushes boolean values outwards
-    and mostly eliminates them.
-    If any values BTrue/BFalse remain, they are the
-    topmost expression (i.e. if the whole expression is True/False).
+{- | Fold constants in a term.
+
+TODO: Create a version that works on flattened terms.
 -}
-class Functor f => SimpBool f where
-    simpBool :: Alg f BooleanExprSimp
+constantFold' :: Term BOps Bool a -> Either Bool (Term BOps Void a)
+constantFold' = cata fRec where
+    fRec :: Alg (TermF BOps Bool a) (Either Bool (Term BOps Void a))
+    fRec (ConstT v) = Left v
+    fRec (VariableT v) = Right $ Var v
+    fRec (RecT (UnaryOp BooleanNot t)) = case t of
+        Left b      -> Left $ not b
+        Right t'    -> Right $ BNot t'  -- We could have "Right $ not t'" here, woot?
+    fRec (RecT (BinaryOp BooleanAnd l r)) = sAnd l r where
+        sAnd (Right a)      (Right b)   = Right $ BAnd a b
+        sAnd (Left True)    rhs         = rhs
+        sAnd (Left False)   _           = Left False
+        sAnd lhs            rhs         = sAnd rhs lhs -- symm.
+    fRec (RecT (BinaryOp BooleanOr l r)) = sOr l r where
+        sOr  (Right a)      (Right b)   = Right $ BOr a b
+        sOr  (Left True)    _           = Left True
+        sOr  (Left False)   rhs         = rhs
+        sOr  lhs            rhs         = sOr rhs lhs -- symm.
+    fRec (RecT (FlatOp op _)) = absurd op
 
--- Lift simpBool over sums of functors
-$(deriveLiftSum [''SimpBool])
-
-instance SimpBool BooleanValue where
-    simpBool :: BooleanValue BooleanExprSimp -> BooleanExprSimp
-    simpBool BTrue      = Left BTrue
-    simpBool BFalse     = Left BFalse
-
-instance SimpBool BooleanVariable where
-    simpBool :: BooleanVariable BooleanExprSimp -> BooleanExprSimp
-    simpBool = Right . inject . constmap
-    -- simpBool (BVariable v)  = Right $ iBVar v
-
-instance SimpBool BooleanNot where
-    simpBool :: BooleanNot BooleanExprSimp -> BooleanExprSimp
-    simpBool (BNot (Left BTrue))    = Left BFalse
-    simpBool (BNot (Left BFalse))   = Left BTrue
-    simpBool (BNot (Right other))   = Right $ iBNot other
-
-instance SimpBool BooleanOp where
-    simpBool :: BooleanOp BooleanExprSimp -> BooleanExprSimp
-    simpBool (BAnd (Left BTrue) e)  = e
-    simpBool (BAnd (Left BFalse) e) = Left BFalse
-    simpBool (BAnd e (Left BTrue))  = e
-    simpBool (BAnd e (Left BFalse)) = Left BFalse
-    simpBool (BAnd (Right a) (Right b)) = Right $ iBAnd a b
-
-    simpBool (BOr (Left BTrue) e)   = Left BTrue
-    simpBool (BOr (Left BFalse) e)  = e
-    simpBool (BOr e (Left BTrue))   = Left BTrue
-    simpBool (BOr e (Left BFalse))  = e
-    simpBool (BOr (Right a) (Right b)) = Right $ iBOr a b
-
-simplifyPrimitive :: SimpBool f => Term f -> BooleanExprSimp
-simplifyPrimitive = cata simpBool
+-- Generalized to arbitrary inputs
+constantFold :: (t a :<: Term BOps Bool a) => t a -> Either Bool (Term BOps Void a)
+constantFold = constantFold' . inject
 
 {-----------------------------------------------------------------------------}
--- Boolean literals     (Step 2 of toCNF)
--- Literal = Variable + optional Negation
+-- Push negations up to variables, creating literals
 
--- | Monad used for the transformation
-type PushNegM m = ReaderT (String -> Int) m
-    -- (String -> Int) -> Bool -> m a
+pushNegations' :: Term BOps Void a -> TermLit BNOps Void a
+pushNegations' term = cata pushNeg term True where
+    pushNeg :: Alg (TermF BOps Void a) (Bool -> TermLit BNOps Void a)
+    pushNeg (ConstT x) = absurd x
+    pushNeg (VariableT x) = \b -> TermLit $ Var (b, x)
+    pushNeg (RecT (UnaryOp BooleanNot t)) = t . not
+    pushNeg (RecT (BinaryOp op l r)) = \b -> TermLit $
+        BBOp (bool invertOp id b op) (unTermLit $ l b) (unTermLit $ r b)
+    pushNeg (RecT (FlatOp op _)) = absurd op
 
--- Tiny little helper
--- withPNM :: Monad m => ((String -> Int) -> Bool -> PushNegM m a) -> PushNegM m a
--- withPNM f = do
---     (r, n) <- ask
---     f r n
+{-----------------------------------------------------------------------------}
+-- Flattening
 
--- pushNeg eliminates negations by pushing them inwards
--- and turning variables into literals
-class (Functor f, Traversable f) => PushNeg f where
-    pushNeg :: Monad m => AlgM (PushNegM m) f (Bool -> BooleanExprLit)
+type BNFlOps = Op Void Void BooleanFlatOp
 
--- Lift pushNeg over sums of functors
-$(deriveLiftSum [''PushNeg])
+flatten' :: forall uop val var. ProperOpTag uop
+     => Term (Op uop BooleanBOp Void) val var -> Term (Op uop Void BooleanFlatOp) val var
+flatten' = cata flat where
+    flat :: Alg (TermF (Op uop BooleanBOp Void) val var) (Term (Op uop Void BooleanFlatOp) val var)
+    flat (ConstT v) = Val v
+    flat (VariableT v) = Var v
+    --flat (RecT (UnaryOp op _)) = absurd op
+    flat (RecT (UnaryOp op t)) = BUOp op t
+    flat (RecT (BinaryOp BooleanAnd a b)) = case (a, b) of
+        (BConj l, BConj r)  -> BConj (l ++ r)
+        (BConj l, rhs    )  -> BConj (l ++ [rhs])
+        (lhs    , BConj r)  -> BConj (lhs : r)
+        (lhs    , rhs    )  -> BConj [lhs, rhs]
+    flat (RecT (BinaryOp BooleanOr a b)) = case (a, b) of
+        (BDisj l, BDisj r)  -> BDisj (l ++ r)
+        (BDisj l, rhs    )  -> BDisj (l ++ [rhs])
+        (lhs    , BDisj r)  -> BDisj (lhs : r)
+        (lhs    , rhs    )  -> BDisj [lhs, rhs]
+    flat (RecT (FlatOp op _)) = absurd op
 
-instance PushNeg BooleanVariable where
-    --pushNeg :: BooleanVariable (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
-    pushNeg :: Monad m => AlgM (PushNegM m) BooleanVariable (Bool -> BooleanExprLit)
-    pushNeg (BVariable s) = do
-        resolve <- ask
-        let (i :: Int) = resolve s
-        return $ \positive -> iBooleanLit $ bool (-i) i positive
+{- | 'flatten'' Generalized to arbitrary inputs.
 
-instance PushNeg BooleanNot where
-    pushNeg :: Monad m => AlgM (PushNegM m) BooleanNot (Bool -> BooleanExprLit)
-    pushNeg (BNot lit) = return $ \positive -> lit (not positive)
+Sometimes GHC will try to fix 'val' and 'var' to arbitrary types. You can avoid
+that by using type applications, e.g.:
 
-instance PushNeg BooleanOp where
-    --pushNeg :: BooleanOp (Bool -> BooleanExprLit) -> (Bool -> BooleanExprLit)
-    pushNeg :: Monad m => AlgM (PushNegM m) BooleanOp (Bool -> BooleanExprLit)
-    pushNeg (BAnd a b) = return $ \case
-        False   -> iBOr  (a False) (b False)
-        True    -> iBAnd (a True)  (b True)
-    pushNeg (BOr a b) = return $ \case
-        False   -> iBAnd (a False) (b False)
-        True    -> iBOr  (a True)  (b True)
-
-pushNegationsM :: (Monad m, PushNeg f, BooleanVariable :<: f) => Term f -> m ([String], BooleanExprLit)
-pushNegationsM e = do
-    let (names, map) = makeVariableMap e
-    f <- runReaderT (cataM pushNeg e) (map !!)
-    return (names, f True)
-
--- Idea: PushNeg can operate on extended operation (see below)
-pushNegations :: (PushNeg f, BooleanVariable :<: f) => Term f -> ([String], BooleanExprLit)
-pushNegations = runIdentity . pushNegationsM
-
--- We usually want to apply it to BooleanExprSimp directly
--- usage e.g.: prettyBool $ pushNegations' $ simplifyPrimitive $ exampleExpr05
-pushNegations' :: (PushNeg f, BooleanVariable :<: f) => MaybeTrivial (Term f) -> ([String], MaybeTrivial BooleanExprLit)
-pushNegations' = traverse pushNegations
-
-{- TODO:
-Maybe pushNegations can be decomposed into two functions
-    mkLit :: Bool -> Variable -> Literal
-    pushNegations :: (Bool -> Variable -> a) -> Term (...) -> Term (... :+: a)
-So we can get the function
-     pushNegForm :: BooleanExprSimp -> BooleanExprSimp
-for free
-
-TODO: Function to turn literals back into BooleanVariable :+: BooleanNot
+>>> flatten @Bool @String $ constantFold demo2b
 -}
+flatten :: forall val var t. (t :<: Term BNOps val var) => t -> Term BNFlOps val var
+flatten = flatten' . inject
 
 {-----------------------------------------------------------------------------}
--- Complete simplification step
+-- Simplifier
+-- Doesn't currently simplify a lot
 
-simplify :: SimpBool f => Term f -> ([String], MaybeTrivial BooleanExprLit)
-simplify = pushNegations' . simplifyPrimitive
+simplify :: (t a :<: Term BOps Bool a) => t a -> TermLit BNFlOps Void a
+simplify term = case constantFold term of
+    Left True -> TermLit $ BConj []
+    Left False -> TermLit $ BDisj []
+    Right b -> (TermLit . flatten . unTermLit . pushNegations') b

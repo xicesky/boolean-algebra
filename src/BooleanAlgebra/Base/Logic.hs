@@ -6,10 +6,12 @@ import Prelude hiding (and, or, not, (&&), (||))
 import BooleanAlgebra.Base.Class
 
 -- Predicate logic!?!?
+instance PreBoolean b => PreBoolean (a -> b) where
+    not a i   = not (a i)
+
 instance Boolean b => Boolean (a -> b) where
     and a b i = and (a i) (b i)
     or  a b i = or  (a i) (b i)
-    not a i   = not (a i)
 
 {- Note: there is a (co?) monad here, i can smell it, just have to find it!
 ... and probably a nice QualifiedDo for stating rules!

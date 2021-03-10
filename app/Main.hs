@@ -16,7 +16,7 @@ Inspiration for solver:
     http://hackage.haskell.org/package/cflp
 -}
 
-demo :: BooleanExpr -> IO ()
+demo :: BooleanExpr String -> IO ()
 demo ex = do
     putStr "Original    : "; printBool ex
     putStr "Simplified  : "; printBool $ simplify ex
@@ -34,10 +34,6 @@ standardDemo = do
 
     demo exampleExpr05
     putStrLn ""
-
-    -- And just to show off a tree view
-    putStrLn "Expression as tree:"
-    drawBool exampleExpr05
 
 main :: IO ()
 main = standardDemo

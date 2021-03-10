@@ -12,6 +12,7 @@ import Control.Applicative (Alternative(..))
 
 import Missing.Void
 import Term.Term
+import Term.Substitution
 import BooleanAlgebra.Base.Class
 import qualified BooleanAlgebra.Base.Class as B
 
@@ -60,6 +61,40 @@ type BooleanExprFlat        = Term BFlOps Bool
 
 -- Dumb idea? This looks very nice because the Bool gets /factored out/ in the type!
 --type BooleanValue = Term VoidF Bool Void
+
+{-----------------------------------------------------------------------------}
+-- Pattern synonyms
+
+pattern BNot
+    :: () => (ProperRecT (Op BooleanUOp b c), ProperOpTag BooleanUOp)
+    => Term (Op BooleanUOp b c) val var
+    -> Term (Op BooleanUOp b c) val var
+pattern BAnd
+    :: () => (ProperRecT (Op a BooleanBOp c), ProperOpTag BooleanBOp)
+    => Term (Op a BooleanBOp c) val var
+    -> Term (Op a BooleanBOp c) val var
+    -> Term (Op a BooleanBOp c) val var
+pattern BOr
+    :: () => (ProperRecT (Op a BooleanBOp c), ProperOpTag BooleanBOp)
+    => Term (Op a BooleanBOp c) val var
+    -> Term (Op a BooleanBOp c) val var
+    -> Term (Op a BooleanBOp c) val var
+
+pattern BNot a      = Fix4 (RecT (UnaryOp BooleanNot a))
+pattern BAnd a b    = Fix4 (RecT (BinaryOp BooleanAnd a b))
+pattern BOr  a b    = Fix4 (RecT (BinaryOp BooleanOr a b))
+
+pattern BConj :: () => (ProperRecT (Op a b1 BooleanFlatOp), ProperOpTag BooleanFlatOp)
+    => [Fix4 TermF (Op a b1 BooleanFlatOp) b2 c] -> Fix4 TermF (Op a b1 BooleanFlatOp) b2 c
+pattern BConj xs    = Fix4 (RecT (FlatOp BConjunction xs))
+
+pattern BDisj :: () => (ProperRecT (Op a b1 BooleanFlatOp), ProperOpTag BooleanFlatOp)
+    => [Fix4 TermF (Op a b1 BooleanFlatOp) b2 c] -> Fix4 TermF (Op a b1 BooleanFlatOp) b2 c
+pattern BDisj xs    = Fix4 (RecT (FlatOp BDisjunction xs))
+
+
+{-# COMPLETE Var, Val, BNot, BAnd, BOr, BFlOp #-}
+{-# COMPLETE Var, Val, BNot, BAnd, BOr, BConj, BDisj #-}
 
 {-----------------------------------------------------------------------------}
 
@@ -119,84 +154,26 @@ substVarsL f = TermLit . substVars f' . unTermLit where
     f' (False, name) = BNot $ unTermLit $ f name
 
 {-----------------------------------------------------------------------------}
--- Utilities
+-- Conjunction / Disjunction clauses and CNF
+-- TODO: These probably deserve their own module and maybe "Monad" instances?
 
--- | Inverse of 'BVariable'
-unVar :: BooleanVariable a -> String
-unVar (BVariable n) = n
+-- | Boolean conjunctions of arbitrary length
+-- a.k.a. "flattened" and expressions
+data Conjunction e = Conjunction [e]
+    deriving (Show, Eq, Functor, Foldable, Traversable)
 
--- | Inverse of 'BooleanValue'
-unVal :: BooleanValue a -> Bool
-unVal (BooleanValue b) = b
+-- | Boolean disjunctions of arbitrary length
+-- a.k.a. "flattened" or expressions
+data Disjunction e = Disjunction [e]
+    deriving (Show, Eq, Functor, Foldable, Traversable)
 
--- | Inverse of 'BooleanLit'
-unLit :: BooleanLit e -> Int
-unLit (BooleanLit n) = n
+-- | Conjunctive normal form
+newtype CNF name = CNF { unCNF :: Conjunction (Disjunction (Literal name)) }
 
--- Shorthands
-
-iVal :: (BooleanValue :<: f) => Bool -> Cxt h f a
-iVal = iBooleanValue
-
-iTrue :: (BooleanValue :<: f) => Cxt h f a
-iTrue = iVal True
-
-iFalse :: (BooleanValue :<: f) => Cxt h f a
-iFalse = iVal False
-
-iLit ::  (BooleanLit :<: f) => Int -> Cxt h f a
-iLit = iBooleanLit
-
--- lPos :: String -> BooleanLit a
--- lPos = BooleanLit True
-
--- lNeg :: String -> BooleanLit a
--- lNeg = BooleanLit False
-
--- iPos :: (BooleanLit :<: f) => String -> Cxt h f a
--- iPos = iBooleanLit True
-
--- iNeg :: (BooleanLit :<: f) => String -> Cxt h f a
--- iNeg = iBooleanLit False
-
-{-----------------------------------------------------------------------------}
--- ConstFunctor
-
-instance ConstFunctor BooleanValue where
-    constmap (BooleanValue b) = BooleanValue b
-
-instance ConstFunctor BooleanVariable where
-    constmap (BVariable i) = BVariable i
-
-instance ConstFunctor BooleanLit where
-    constmap (BooleanLit i) = BooleanLit i
-
-{-----------------------------------------------------------------------------}
--- BooleanAlgebra class instances
-
-instance Boolean (BooleanValue a) where
-    and BTrue  x = x
-    and BFalse _ = BFalse
-    or  BTrue  _ = BTrue
-    or  BFalse x = x
-    not BTrue    = BTrue
-    not BFalse   = BFalse
-
-instance Boolean BooleanExpr where
-    and = iBAnd
-    or = iBOr
-    not = iBNot
-
-instance BooleanPreAlgebra BooleanExpr where
-    var = iBVariable
-
-instance BooleanArithmetic BooleanExpr where
-    fromBool b = iBooleanValue b
-
-instance BooleanAlgebra BooleanExpr
-
-{-----------------------------------------------------------------------------}
--- Applicative / Alternative for Conjunction / Disjunction
+deriving instance Show name => Show (CNF name)
+deriving instance Functor CNF
+deriving instance Foldable CNF
+deriving instance Traversable CNF
 
 instance Applicative Conjunction where
     pure = Conjunction . pure
@@ -217,3 +194,14 @@ instance Alternative Disjunction where
     empty = Disjunction empty
     (<|>) (Disjunction a) (Disjunction b)
         = Disjunction (a <|> b)
+
+distributeDisjunction :: Disjunction (Conjunction e) -> Conjunction (Disjunction e)
+distributeDisjunction = sequenceA       -- Well, isn't this easy.
+
+joinConjunction :: Conjunction (Conjunction e) -> Conjunction e
+joinConjunction (Conjunction xs) = -- Monad.join
+    Conjunction [y | Conjunction x <- xs, y <- x]
+
+joinDisjunction :: Disjunction (Disjunction e) -> Disjunction e
+joinDisjunction (Disjunction xs) = -- Monad.join
+    Disjunction [y | Disjunction x <- xs, y <- x]

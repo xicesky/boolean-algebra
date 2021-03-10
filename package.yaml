@@ -32,9 +32,6 @@ dependencies:
 - recursion-schemes
 - criterion
 - QuickCheck
-# FIXME Kill this
-- compdata
-- tree-view
 
 default-extensions:
 - ConstraintKinds

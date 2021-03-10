@@ -6,7 +6,6 @@ module BooleanAlgebra
     ,   module BooleanAlgebra.Base.Expression
     ,   module BooleanAlgebra.Base.Pretty
     ,   module BooleanAlgebra.Transform.Simplify
-    ,   module BooleanAlgebra.Transform.Aggregate
     ,   module BooleanAlgebra.Transform.CNF
     ,   module BooleanAlgebra.Transform.Variable
     ,   module BooleanAlgebra.Support.Arbitrary
@@ -25,7 +24,6 @@ import BooleanAlgebra.Base.Logic
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Base.Pretty
 import BooleanAlgebra.Transform.Simplify
-import BooleanAlgebra.Transform.Aggregate
 import BooleanAlgebra.Transform.CNF
 import BooleanAlgebra.Transform.Variable
 

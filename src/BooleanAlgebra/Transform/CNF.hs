@@ -1,78 +1,29 @@
 
 module BooleanAlgebra.Transform.CNF where
 
-import Data.Comp.Term
-import Data.Comp.Ops
-import Data.Comp.Algebra
-    (   Alg, Coalg, RAlg, RCoalg
-    ,   cata, ana, para, apo
-    )
+import Prelude hiding (and, or, not, (&&), (||))
 
-import Data.Comp.Derive
---import Data.Comp.Derive.Show
-import Data.Comp.Show ()            -- for the Show instance
-import Data.Comp.Equality ()        -- for the Eq instance
+import Data.Kind (Type)
+import Data.Void
+import Data.Functor.Identity
 
-import Control.Monad (join)
+-- recursion-schemes
+import Data.Functor.Foldable
 
-import BooleanAlgebra.Util.THUtil
-import BooleanAlgebra.Util.Util
+-- containers
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+
+import Missing.Misc (Alg)
+import Term.Term
+import Term.Inject
+
+import BooleanAlgebra.Base.Class
 import BooleanAlgebra.Base.Expression
-import BooleanAlgebra.Transform.IntermediateForms
 import BooleanAlgebra.Transform.Simplify
-import BooleanAlgebra.Transform.Aggregate
+import BooleanAlgebra.Transform.Variable
 
-{-----------------------------------------------------------------------------}
--- Distributor  (Step 3 of toCNF)
--- Distributes disjunctions over conjunctions:
---      a ∨ (b ∧ c) = (a ∨ b) ∧ (a ∨ c)
-
-distributeCNF :: Disjunction (Conjunction e) -> Conjunction (Disjunction e)
-distributeCNF = sequenceA       -- Well, isn't this easy.
-
-joinConjunction :: Conjunction (Conjunction e) -> Conjunction e
-joinConjunction (Conjunction xs) = -- Monad.join
-    Conjunction [y | Conjunction x <- xs, y <- x]
-
-joinDisjunction :: Disjunction (Disjunction e) -> Disjunction e
-joinDisjunction (Disjunction xs) = -- Monad.join
-    Disjunction [y | Disjunction x <- xs, y <- x]
-
--- Distribute Disjunctions over Conjunctions (limited to BooleanCD)
-class Functor f => DistributeDoC f where
-    distributeDoC :: Alg f CNF
-
--- Lift aggregateCD over sums of functors
-$(deriveLiftSum [''DistributeDoC])
-
-instance DistributeDoC BooleanLit where
-    distributeDoC :: BooleanLit CNF -> CNF
-    distributeDoC = pure . pure . constmap
-
-instance DistributeDoC Conjunction where
-    distributeDoC :: Conjunction CNF -> CNF
-    distributeDoC = joinConjunction
-
-instance DistributeDoC Disjunction where
-    distributeDoC :: Disjunction CNF -> CNF
-    distributeDoC = fmap joinDisjunction . distributeCNF
-
-distributeToCNF :: DistributeDoC f => Term f -> CNF
-distributeToCNF = cata distributeDoC
-
-{-----------------------------------------------------------------------------}
--- Basic conversion to CNF
--- doesn't add any variables
-
-toCNF :: forall f. (SimpBool f
-    , Aggregate ([String], MaybeTrivial BooleanExprLit) ([String], BooleanExprFlatLit))
-    => Term f -> ([String], CNF)
-toCNF e = let
-    simplified :: ([String], MaybeTrivial BooleanExprLit)
-    simplified = simplify e
-    aggregated :: ([String], BooleanExprFlatLit)
-    aggregated = aggregateConjDisj simplified
-    in fmap distributeToCNF aggregated
+{-# ANN module "HLint: ignore Use camelCase" #-}
 
 {-----------------------------------------------------------------------------}
 -- Stats of CNF clauses
@@ -86,9 +37,9 @@ data CNFStats = CNFStats
     deriving (Show, Eq)
 
 -- | Collect some statistics of a CNF representation.
--- Does not work on the empty CNF!
-cnfStats :: CNF -> CNFStats
-cnfStats (Conjunction xs) = CNFStats
+-- FIXME Does not work on the empty CNF!
+cnfStats :: CNF a -> CNFStats
+cnfStats (CNF (Conjunction xs)) = CNFStats
     {   nClauses = length xs
     ,   minClauseLength = minimum clens
     ,   maxClauseLength = maximum clens
@@ -98,3 +49,103 @@ cnfStats (Conjunction xs) = CNFStats
     clens = fmap length xs
     average :: (Real a, Fractional b) => [a] -> b
     average xs = realToFrac (sum xs) / realToFrac (length xs)
+
+{-----------------------------------------------------------------------------}
+-- Transform to CNF by distribution
+
+-- Distributes disjunctions over conjunctions:
+--      a ∨ (b ∧ c) = (a ∨ b) ∧ (a ∨ c)
+
+distributeToCNF :: forall a. TermLit BNFlOps Void a -> CNF a
+distributeToCNF = cata distr . unTermLit where
+    distr :: Alg (TermF BNFlOps Void (Literal a)) (CNF a)
+    distr (ConstT x) = absurd x
+    distr (VariableT x) = CNF $ (pure . pure) x
+    distr (RecT (UnaryOp op _)) = absurd op
+    distr (RecT (BinaryOp op _ _)) = absurd op
+    distr (RecT (FlatOp op xs)) = case op of
+        BConjunction -> CNF $ joinConjunction $ Conjunction $ unCNF <$> xs
+        BDisjunction -> CNF $ fmap joinDisjunction . distributeDisjunction $ Disjunction $ unCNF <$> xs
+
+
+{- | Basic conversion to CNF
+
+Doesn't add any variables, but the number of clauses may explode!
+-}
+toCNF :: (t a :<: Term BOps Bool a) => t a -> CNF a
+toCNF = distributeToCNF . simplify
+
+{-----------------------------------------------------------------------------}
+-- Tseitin-Transformation
+
+-- Idea: Handle extended operations
+-- Idea: Preserve annotations which trace back to extended ops
+
+cnf_just :: Literal a -> CNF a
+cnf_just a = CNF $ pure $ pure a
+
+cnf_iff :: Literal a -> Literal a -> CNF a
+cnf_iff a b = CNF $ Conjunction             -- a ⇔ b ≡
+    [   Disjunction [ not a, b ]            -- a ⇒ b ∧
+    ,   Disjunction [ a, not b ]            -- a ⇐ b
+    ]
+
+cnf_iff_and :: Literal a -> Literal a -> Literal a -> CNF a
+cnf_iff_and z a b = CNF $ Conjunction
+    [   Disjunction [ not z, a ]            -- z ⇒ a
+    ,   Disjunction [ not z, b ]            -- z ⇒ b
+    ,   Disjunction [ z, not a, not b ]     -- ¬z ⇒ ¬a ∨ ¬b
+    ]
+
+cnf_iff_or :: Literal a -> Literal a -> Literal a -> CNF a
+cnf_iff_or z a b = CNF $ Conjunction
+    [   Disjunction [ not z, a, b ]         -- z ⇒ a ∨ b
+    ,   Disjunction [ z, not a ]            -- ¬z ⇒ ¬a
+    ,   Disjunction [ z, not b ]            -- ¬z ⇒ ¬b
+    ]
+
+cnf_all :: [CNF a] -> CNF a
+cnf_all = CNF . joinConjunction . Conjunction . fmap unCNF
+
+tseitinTransformM :: forall m. Monad m => Term BOps Void Int -> FreshT m (CNF Int)
+tseitinTransformM term = do
+    (zTerm, cnf) <- cata tt term
+    return $ cnf_all [cnf, cnf_just zTerm]
+    where
+    tt :: Alg (TermF BOps Void Int) (FreshT m (Literal Int, CNF Int))
+    tt t = sequenceA t >>= \case
+        ConstT v    -> absurd v
+        VariableT v -> return ((True, v), CNF $ Conjunction [])
+        RecT (UnaryOp BooleanNot (v, cnf)) -> return (not v, cnf)
+        RecT (BinaryOp BooleanAnd (va, cnfa) (vb, cnfb)) ->
+            freshName "zA_" >>= \z -> let
+            t' = cnf_all
+                [   cnfa
+                ,   cnfb
+                ,   cnf_iff_and (True, z) va vb
+                ]
+            in return ((True, z), t')
+        RecT (BinaryOp BooleanOr (va, cnfa) (vb, cnfb)) ->
+            freshName "zO_" >>= \z -> let
+            t' = cnf_all
+                [   cnfa
+                ,   cnfb
+                ,   cnf_iff_or (True, z) va vb
+                ]
+            in return ((True, z), t')
+        RecT (FlatOp op _) -> absurd op
+
+-- tseitinTransform' :: Term BOps Bool a -> Either Bool (Term BOps Void a)
+tseitinTransform' :: Term BOps Void String -> CNF String
+tseitinTransform' t = let
+    (Context nmap iterm) = buildContext t
+    result :: (CNF Int, MappedNames String)
+    result = runIdentity $ runFreshT (tseitinTransformM iterm) nmap
+    (cnf, (iton, _)) = result
+    in fmap (iton Map.!) cnf 
+
+toCNF2 :: Term BOps Bool String -> CNF String
+toCNF2 term = case constantFold term of
+    Left True   -> CNF $ Conjunction []
+    Left False  -> CNF $ Conjunction [ Disjunction [] ]
+    Right term' -> tseitinTransform' term'

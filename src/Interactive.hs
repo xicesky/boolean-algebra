@@ -9,7 +9,6 @@ import Test.QuickCheck.Arbitrary
 
 import BooleanAlgebra
 import BooleanAlgebra.Examples
-import BooleanAlgebra.Transform.IntermediateForms
 
 import Debug.Trace
 

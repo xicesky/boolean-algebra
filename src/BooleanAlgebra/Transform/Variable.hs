@@ -1,202 +1,164 @@
 
-{-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
+-- FIXME: This is not specific to BooleanAlgebra, move to Term
 module BooleanAlgebra.Transform.Variable where
 
-import Prelude hiding (lookup, (!!))
-import Data.Tuple (swap)
-import Data.Bool (bool)
-import Data.Void
-import Data.Foldable
-import Data.Functor.Identity (Identity(..))
-import Control.Monad.Reader
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.HashSet as HashSet
+-- containers
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 
-import Data.Comp.Term
-import Data.Comp.Ops
-import Data.Comp.Sum (inject)
-import Data.Comp.Algebra
-import Data.Comp.Generic (subterms')
+-- mtl / transformers
+import Control.Monad.Identity
+import Control.Monad.State
+import Control.Monad.Writer
 
-import Container
-
-import BooleanAlgebra.Util.THUtil
-import BooleanAlgebra.Base.Expression
-import BooleanAlgebra.Transform.IntermediateForms
+import Term.Term
 
 {-----------------------------------------------------------------------------}
+-- Handling mapped variables
 
-class HasVariables t where
-    -- | Fetch the names of all the variables
-    variableNames :: t -> HashSet String
+type MappedNames name = (Map Int name, Map name Int)
 
-class HasLiterals t where
-    literals :: t -> HashSet Int
-    absLiterals :: t -> HashSet Int
-    absLiterals = HashSet.map abs . literals
-
-makeVariableMap :: HasVariables t => t -> ([String], HashMap String Int)
-makeVariableMap t = let
-    list :: [String]
-    list = HashSet.toList $ variableNames t
-    map :: HashMap String Int
-    map = HashMap.fromList $ zip list [1..]
-    in (list, map)
-
-{-----------------------------------------------------------------------------}
-
-variableNamesDefault :: forall f. (Foldable f, BooleanVariable :<: f) =>
-    Term f -> HashSet String
-variableNamesDefault = fromList . fmap unVar . subterms'
-
--- -- | Fetch the names of all the literals
-literalNamesDefault :: forall f. (Foldable f, BooleanLit :<: f) =>
-    Term f -> HashSet Int
-literalNamesDefault = fromList . fmap unLit . subterms'
-
-instance (Foldable f, BooleanVariable :<: f) => HasVariables (Term f) where
-    variableNames = variableNamesDefault
-
-instance HasLiterals BooleanExprLit where
-    literals = literalNamesDefault
-
-instance HasLiterals BooleanExprFlatLit where
-    literals = literalNamesDefault
-
-instance HasLiterals CNF where
-    literals = fromList . fmap unLit . (toList <=< toList)
-
-{-----------------------------------------------------------------------------}
--- Variable substitution
-
-{- | A substitution from constructors in f to terms of g.
-
-Wrapped in a newtype to avoid issues with impredicative polymorphism.
-
-You can think of it as:
-
-> type Subst m f g = forall a. f a -> m (Context g a)
+{- The variables numbers HAVE TO start with 1, because we will
+    use signs in CNF to indicate negation
 -}
-newtype Subst m f g = Subst (HomM m f g)
+mkMappedNames :: Ord name => Set name -> MappedNames name
+mkMappedNames nSet = let
+    nList = Set.toList nSet
+    in (Map.fromList $ zip [1..] nList, Map.fromList $ zip nList [1..])
 
--- | A Monad used to run the substitution.
-type VarSubstM g m = ReaderT (Subst m BooleanVariable g) m
+mappedHasName :: Ord name => MappedNames name -> name -> Bool
+mappedHasName (_, m) name = Map.member name m
 
--- | Lift a non-monadic term homomorphism to a monadic one
-liftHom :: Monad m => Hom f g -> HomM m f g
-liftHom hom = return . hom
+mappedInsert :: (Ord name, Show name) => Int -> name -> MappedNames name -> MappedNames name
+mappedInsert i name (iton, ntoi)
+    | Map.member i iton     = error $ "Index " ++ show i ++ " already exists"
+    | Map.member name ntoi  = error $ "Name " ++ show name ++ " already exists"
+    | otherwise             = (Map.insert i name iton, Map.insert name i ntoi)
 
-{- | Class of terms in which variables can be substituted
--}
-class (Traversable f, Functor g) => SubstVar f g where
-    -- Replaces occurances of 'BooleanVariable' by another term t.
-    substVarAlg :: Monad m => AlgM (VarSubstM g m) f (Term g)
-    -- :: f (Term g) -> VarSubstM g m (Term g)
+data Context f name = Context
+    {   getMappedNames :: MappedNames name
+    ,   getTerm :: f Int
+    }
 
--- FIXME: I don't like overlappable instances
--- But there is no way to avoid them here
+getNameMap :: Context f name -> Map Int name
+getNameMap = fst . getMappedNames
 
-instance {-# OVERLAPPABLE #-} (SubstVar f h, SubstVar g h) => SubstVar (f :+: g) h where
-    substVarAlg = caseF substVarAlg substVarAlg
+getIndexMap :: Context f name ->  Map name Int
+getIndexMap = snd . getMappedNames
 
--- The "default" instance. We can avoid overlappable here
-instance {-# OVERLAPPABLE #-} (Traversable f, Functor g, f :<: g) => SubstVar f g where
-    substVarAlg (fs :: f (Term g)) = return $ Term . inj $ fs
+deriving instance (Show (f Int), Show name) => Show (Context f name)
+deriving instance (Eq (f Int), Eq name) => Eq (Context f name)
 
--- The specialized instance for variables
-instance (Functor g) => SubstVar BooleanVariable g where
-    substVarAlg :: forall m. Monad m => AlgM (VarSubstM g m) BooleanVariable (Term g)
-    substVarAlg (fs :: BooleanVariable (Term g)) = do
-            (Subst hom :: Subst m BooleanVariable g) <- ask
-            (gtg :: Context g (Term g)) <- lift $ hom fs
-            return $ appCxt gtg
+-- FIXME: Wrong for: Term op val (Bool, String)
+-- It would build a name map from LITERALS to Ints
+-- Demo:
+-- >>> buildContext $ simplify demo1b
+buildContext :: forall f name. (Traversable f, Ord name)
+    => f name -> Context f name
+buildContext t = let
+    mappedNames :: MappedNames name
+    mappedNames = mkMappedNames (foldMap Set.singleton t)
+    indexNames :: name -> Int
+    indexNames = (Map.!) (snd mappedNames)
+    in Context mappedNames (fmap indexNames t)
 
--- | Monadic variable substitution catamorphism.
-substVarM :: forall m f g. (Monad m, SubstVar f g)
-    => HomM m BooleanVariable g -> Term f -> m (Term g)
-substVarM hom f = runReaderT (cataM substVarAlg f) (Subst hom)
+destroyContext :: forall f name. (Traversable f, Ord name)
+    => Context f name -> f name
+destroyContext (Context mappedNames t) = let
+    remapNames :: Int -> name
+    remapNames = (Map.!) (fst mappedNames)
+    in fmap remapNames t
 
--- | Variable substitution catamorphism.
---
--- Non-monadic version of 'substVarM'
-substVar :: forall f g. SubstVar f g
-    => Hom BooleanVariable g -> Term f -> Term g
-substVar hom f = runIdentity $ substVarM (liftHom hom) f
-
-{-----------------------------------------------------------------------------}
--- Substitute variables using replacements from a map
-
--- | Substitute variables using replacements from a map.
---
--- Flexible monadic version
-substituteM :: forall f g m map.
-    ( Traversable f, Functor g, Monad m
-    , MapLike map, (String, Term g) ~ ElemT map     -- Keys are Strings, Values are Terms
-    , SubstVar f g
-    ) => map                                        -- Maps names to new terms
-    -> (forall a. String -> m (Context g a))        -- Action on unmapped variables
-    -> Term f                                       -- Term to transform
-    -> m (Term g)
-substituteM map err = substVarM hom where
-    hom :: BooleanVariable a -> m (Context g a)
-    hom (BVariable s) = case lookup s map of
-        Just expr   -> return $ toCxt expr
-        Nothing     -> err s
-
--- | Substitute variables using replacements from a map.
---
--- Partial substitution (leaves unmapped variables in place)
-substituteM' :: forall f m map.
-    ( Traversable f, Monad m
-    , MapLike map, (String, Term f) ~ ElemT map
-    , SubstVar f f
-    , BooleanVariable :<: f
-    ) => map
-    -> Term f
-    -> m (Term f)
-substituteM' map = substituteM map (return . iBVariable)
-
--- | Substitute variables using replacements from a map.
---
--- Non-monadic version of 'substituteM''
-substitute' :: forall f map.
-    ( Traversable f
-    , MapLike map, (String, Term f) ~ ElemT map
-    , SubstVar f f
-    , BooleanVariable :<: f
-    ) => map
-    -> Term f
-    -> Term f
-substitute' map = runIdentity . substituteM' map
+-- TODO: Could be much more efficient than rebuilding the whole context
+cRenameVars :: (Traversable f, Ord a, Ord b) => (a -> b) -> Context f a -> Context f b
+cRenameVars rename = buildContext . fmap rename . destroyContext
 
 {-----------------------------------------------------------------------------}
--- Substitutions for BooleanLit
 
--- | A Monad used to run the substitution of literals.
-type LitSubstM g m = ReaderT (Subst m BooleanLit g) m
+findFreshName :: MappedNames String -> String -> String
+findFreshName m prefix = head $ dropWhile exists' varnames where
+    suffixes :: [String]
+    suffixes = [replicate k ['a'..'z'] | k <- [1..]] >>= sequence
+    --suffixes = "" :([replicate k ['a'..'z'] | k <- [1..]] >>= sequence)
+    varnames :: [String]
+    varnames = (prefix++) <$> suffixes
+    exists' :: String -> Bool
+    exists' = mappedHasName m
 
-class (Traversable f, Functor g) => SubstLit f g where
-    substLitAlg :: Monad m => AlgM (LitSubstM g m) f (Term g)
+{-----------------------------------------------------------------------------}
+-- Monad for fresh names
 
-instance {-# OVERLAPPABLE #-} (SubstLit f h, SubstLit g h) => SubstLit (f :+: g) h where
-    substLitAlg = caseF substLitAlg substLitAlg
+-- Not "splitable" for now
+data FreshState = FreshState
+    {   fsNextIndex :: Int
+    ,   fsPrefix :: String
+    ,   fsNames :: MappedNames String
+    }
+    deriving (Show, Eq)
 
-instance {-# OVERLAPPABLE #-} (Traversable f, Functor g, f :<: g) => SubstLit f g where
-    substLitAlg (fs :: f (Term g)) = return $ Term . inj $ fs
+fsMkFreshName :: String -> FreshState -> (Int, FreshState)
+fsMkFreshName prefix (FreshState index p names) = let
+    name :: String
+    name = findFreshName names prefix
+    in (index, FreshState (index+1) p (mappedInsert index name names))
 
--- The specialized instance for BooleanLit
-instance (Functor g) => SubstLit BooleanLit g where
-    substLitAlg :: forall m. Monad m => AlgM (LitSubstM g m) BooleanLit (Term g)
-    substLitAlg (fs :: BooleanLit (Term g)) = do
-            (Subst hom :: Subst m BooleanLit g) <- ask
-            (gtg :: Context g (Term g)) <- lift $ hom fs
-            return $ appCxt gtg
+newtype FreshT m a = FreshT { toStateT :: StateT FreshState m a }
+    --deriving (Functor, Monad, MonadTrans, MonadIO)
 
--- | Monadic literal substitution catamorphism.
-substLitM :: forall m f g. (Monad m, SubstLit f g)
-    => HomM m BooleanLit g -> Term f -> m (Term g)
-substLitM hom f = runReaderT (cataM substLitAlg f) (Subst hom)
+deriving instance Functor m => Functor (FreshT m)
+deriving instance Monad m => Applicative (FreshT m)
+deriving instance Monad m => Monad (FreshT m)
+deriving instance MonadTrans FreshT
+
+deriving instance MonadIO m => MonadIO (FreshT m)
+-- ... and so on... implement as we need it
+
+class MonadFresh m where
+    freshName :: String -> m Int
+
+instance Monad m => MonadFresh (FreshT m) where
+    freshName prefix = FreshT $ do
+        state (fsMkFreshName prefix)
+
+-- FIXME: get some proper names for those functions, these here are horrible
+
+runFreshT :: Monad m => FreshT m a -> MappedNames String -> m (a, MappedNames String)
+runFreshT fresh mapped = let
+    maxI :: Int
+    maxI = maximum $ 0 : Map.keys (fst mapped)
+    initState :: FreshState
+    initState = FreshState (maxI+1) "" mapped
+    in do
+        (a, FreshState _ _ mapped') <- runStateT (toStateT fresh) initState
+        return (a, mapped')
+
+-- FIXME: Useless, works only on terms, not on CNF and literals
+withFreshT :: forall m op val. Monad m
+    => Context (Term op val) String
+    -> (Term op val Int -> FreshT m (Term op val Int))
+    -> m (Context (Term op val) String)
+withFreshT (Context mapped term) f = let
+    result :: m (Term op val Int, MappedNames String)
+    result = runFreshT (f term) mapped
+    in do
+        (term', mapped') <- result
+        return $ Context mapped' term'
+
+-- FIXME: Useless, works only on terms, not on CNF and literals
+withFresh :: Context (Term op val) String
+    -> (Term op val Int -> FreshT Identity (Term op val Int))
+    -> Context (Term op val) String
+withFresh ctx f = runIdentity (withFreshT ctx f)
+
+-- FIXME: Doesn't work on literals
+newFresh :: FreshT Identity (Term op val Int) -> Context (Term op val) String
+newFresh f = runIdentity $ do
+    (term, mapped) <- runFreshT f (mkMappedNames Set.empty)
+    return $ Context mapped term
 
 {-----------------------------------------------------------------------------}
 -- Idea: compare terms for α-Equivalence
