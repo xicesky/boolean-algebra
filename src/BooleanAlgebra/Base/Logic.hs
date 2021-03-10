@@ -63,18 +63,25 @@ existsUnique' s p = exists s $ \x ->
     forAll s $ \y ->
     p y `iff` (x `is` (== y))
 
+given :: BooleanArithmetic b => Bool -> b -> b
+given True  = id
+given False = const true
+
+is :: BooleanArithmetic b => a -> (a -> Bool) -> b
+is a f = if f a then true else false
+
 {-----------------------------------------------------------------------------}
 -- Pre-defined rules and quantifiers: Hacks
 
 -- FIXME dumb encoding requires a variable
-uniqueVar :: BooleanAlgebra b => b
-uniqueVar = var "?"
+-- uniqueVar :: BooleanAlgebra b => b
+-- uniqueVar = var "?"
 
 -- FIXME dumb encoding requires a variable
-given :: BooleanAlgebra b => Bool -> b -> b
-given True = id
-given False = const $ truth uniqueVar
+-- given :: BooleanAlgebra b => Bool -> b -> b
+-- given True = id
+-- given False = const $ truth uniqueVar
 
 -- FIXME dumb encoding requires a variable
-is :: BooleanAlgebra b => a -> (a -> Bool) -> b
-is a f = if f a then truth uniqueVar else falsity uniqueVar
+-- is :: BooleanAlgebra b => a -> (a -> Bool) -> b
+-- is a f = if f a then truth uniqueVar else falsity uniqueVar

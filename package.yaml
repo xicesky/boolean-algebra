@@ -24,15 +24,17 @@ dependencies:
 - data-fix
 - mtl
 - transformers
-- compdata
-- tree-view
 - deriving-compat
 - hashable
 - containers
 - unordered-containers
 - sky-utils
+- recursion-schemes
 - criterion
 - QuickCheck
+# FIXME Kill this
+- compdata
+- tree-view
 
 default-extensions:
 - ConstraintKinds
@@ -52,6 +54,7 @@ default-extensions:
 - PolyKinds
 - RankNTypes
 - ScopedTypeVariables
+- StandaloneDeriving
 - StandaloneKindSignatures
 - TemplateHaskell
 - TypeApplications

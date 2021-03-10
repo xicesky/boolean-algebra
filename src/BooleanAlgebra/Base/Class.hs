@@ -17,20 +17,29 @@ import qualified Prelude as P
 
 {-----------------------------------------------------------------------------}
 
--- | Anything that has boolean operations
-class Boolean b where
-    and :: b -> b -> b
-    or :: b -> b -> b
+{- | Values that can be negated using @not@.
+
+In Haskell we can't make boolean values use negative signs.
+-}
+class PreBoolean b where
+    {- | Negations. Guarantees: @not (not a) == a@.
+    -}
     not :: b -> b
 
-{- Note: I would love to have a PatternSynonym for the ops
-    but it can't work for classes i guess
--}
+-- | Anything that has boolean operations
+class PreBoolean b => Boolean b where
+    and :: b -> b -> b
+    or :: b -> b -> b
 
+    xor :: b -> b -> b
+    xor a b = a && not b || not a && b
+
+-- | Boolean /conjunction/ operator.
 infixr 3 &&
 (&&) :: Boolean b => b -> b -> b
 (&&) = and
 
+-- | Boolean /disjunction/ operator.
 infixr 2 ||
 (||) :: Boolean b => b -> b -> b
 (||) = or
@@ -42,7 +51,6 @@ falsity :: Boolean b =>  b -> b
 falsity x = x && not x
 
 {-----------------------------------------------------------------------------}
-
 
 -- | Boolean arithmetic can represent truth values
 class Boolean b => BooleanArithmetic b where
@@ -70,10 +78,12 @@ class (BooleanArithmetic b, BooleanPreAlgebra b) => BooleanAlgebra b
 
 {-----------------------------------------------------------------------------}
 
+instance PreBoolean Bool where
+    not = P.not
+
 instance Boolean Bool where
     and = (P.&&)
     or = (P.||)
-    not = P.not
 
 instance BooleanArithmetic Bool where
     fromBool = id

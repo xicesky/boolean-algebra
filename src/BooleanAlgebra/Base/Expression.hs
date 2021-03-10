@@ -3,21 +3,15 @@
 
 module BooleanAlgebra.Base.Expression where
 
+import Prelude hiding (and, or, not, (&&), (||))
+import qualified Prelude as P
+
 import Data.Kind (Type)
 import Data.Void
 import Control.Applicative (Alternative(..))
 
-import Container
-import qualified Data.HashMap.Strict as HashMap
-import qualified Data.HashSet as HashSet
-
-import Data.Comp
-import Data.Comp.Derive
-import Data.Comp.Show ()            -- for the Show instance
-import Data.Comp.Equality ()        -- for the Eq instance
-
-import BooleanAlgebra.Util.THUtil
-import BooleanAlgebra.Util.Util
+import Missing.Void
+import Term.Term
 import BooleanAlgebra.Base.Class
 import qualified BooleanAlgebra.Base.Class as B
 
@@ -29,87 +23,100 @@ import qualified BooleanAlgebra.Base.Class as B
 {-----------------------------------------------------------------------------}
 -- Components of boolean terms (expressions)
 
--- | Boolean Values (as part of terms)
-type BooleanValue :: Type -> Type
-data BooleanValue e = BooleanValue Bool
-    deriving (Show, Eq, Functor)
+data BooleanUOp = BooleanNot
+    deriving (Show, Eq, Ord)
+data BooleanBOp = BooleanAnd | BooleanOr
+    deriving (Show, Eq, Ord)
+data BooleanFlatOp = BConjunction | BDisjunction
+    deriving (Show, Eq, Ord)
 
-pattern BTrue = BooleanValue True
-pattern BFalse = BooleanValue False
+instance ProperOpTag BooleanBOp where
+    opPrec BooleanAnd = 6
+    opPrec BooleanOr = 3
+    opName BooleanAnd = "BAnd"
+    opName BooleanOr = "BOr"
 
--- | Variables
-type BooleanVariable :: Type -> Type
-data BooleanVariable e = BVariable String
-    deriving (Show, Eq, Functor)
+instance ProperOpTag BooleanUOp where
+    opPrec BooleanNot = 10
+    opName BooleanNot = "BNot"
 
--- | Literals: A variable with a sign
-type BooleanLit :: Type -> Type
-data BooleanLit e = BooleanLit Int
-    deriving (Show, Eq, Functor)
+instance ProperOpTag BooleanFlatOp where
+    opPrec BConjunction = 6
+    opPrec BDisjunction = 3
+    opName BConjunction = "BConj"
+    opName BDisjunction = "BDisj"
 
--- | Boolean negation
-data BooleanNot e = BNot e
-    deriving (Show, Eq, Functor)
+-- Show1 instance for Op is below
 
--- | Boolean binary operators
-data BooleanOp e
-    = BAnd e e                              -- ^ Conjunction
-    | BOr e e                               -- ^ Disjunction
-    deriving (Show, Eq, Functor)
+type BOps = Op BooleanUOp BooleanBOp Void
+type BFlOps = Op BooleanUOp Void BooleanFlatOp
 
--- | Boolean conjunctions of arbitrary length
--- a.k.a. "flattened" and expressions
-data Conjunction e = Conjunction [e]
-    deriving (Show, Eq, Functor)
-
--- | Boolean disjunctions of arbitrary length
--- a.k.a. "flattened" or expressions
-data Disjunction e = Disjunction [e]
-    deriving (Show, Eq, Functor)
-
-{-----------------------------------------------------------------------------}
-
--- | Modifier for terms that can not otherwise hold trivial values (True, False)
-type MaybeTrivial f = Either (BooleanValue Void) f
-
-{-----------------------------------------------------------------------------}
--- Putting it together using compdata
-
-$(deriveDefault
-    [''BooleanValue
-    ,''BooleanVariable
-    ,''BooleanNot
-    ,''BooleanOp
-    ,''BooleanLit
-    ])
-
--- Don't derive ShowF for aggregates, see bug description in Pretty.hs
-$(deriveNoShow [''Conjunction])
-$(deriveNoShow [''Disjunction])
-
--- Base functor (called "Signature" in compdata)
-type BooleanBaseF
-    = BooleanValue
-    :+: BooleanVariable
-    :+: BooleanNot
-    :+: BooleanOp
-
--- "Standard" algebraic boolean expressions
+-- | "Standard" boolean expressions
 -- use ⊤, ⊥, ¬, ∧, ∨ and variables
-type BooleanExpr = Term BooleanBaseF
+type BooleanExpr            = Term BOps Bool
+
+-- | Boolean expressions with flattened operators
+type BooleanExprFlat        = Term BFlOps Bool
+
+-- Dumb idea? This looks very nice because the Bool gets /factored out/ in the type!
+--type BooleanValue = Term VoidF Bool Void
 
 {-----------------------------------------------------------------------------}
--- Conjunctive normal form
 
--- | Conjunctive normal form (CNF)
-type CNF = Conjunction (Disjunction (BooleanLit Void))
+instance PreBoolean (BooleanExpr a) where
+    not a   = BNot a
 
--- | Build CNF from a nested list of literals
-cnfFromList :: [[BooleanLit a]] -> CNF
-cnfFromList = Conjunction . fmap (Disjunction . fmap constmap)
+instance Boolean (BooleanExpr a) where
+    and a b = BAnd a b
+    or a b  = BOr a b
 
--- TODO: inverse
--- cnfToList :: CNF -> [[BooleanLit a]]
+instance BooleanArithmetic (BooleanExpr a) where
+    fromBool = Val
+
+instance BooleanPreAlgebra (BooleanExpr String) where
+    var = Var
+
+instance BooleanAlgebra (BooleanExpr String)
+
+{-----------------------------------------------------------------------------}
+-- Various little helpers
+
+invertOp :: BooleanBOp -> BooleanBOp
+invertOp BooleanAnd = BooleanOr
+invertOp BooleanOr = BooleanAnd
+
+{-----------------------------------------------------------------------------}
+-- Boolean literals
+
+-- | A /literal/ is a variable with a sign
+type Literal a = (Bool, a)
+
+instance PreBoolean (Literal a) where
+    -- litNeg (b, v) = (not b, v)
+    not (b, n)   = (not b, n)
+
+-- | Terms over literals (usually eschewing negation)
+newtype TermLit op val name  = TermLit { unTermLit :: Term op val (Literal name) }
+
+deriving instance (Show val, Show name) => Show (TermLit op val name)
+deriving instance (Eq val, Eq name) => Eq (TermLit op val name)
+deriving instance Functor (TermLit op val)
+deriving instance Foldable (TermLit op val)
+deriving instance Traversable (TermLit op val)
+
+-- Operations without negation (for use with TermLit)
+type BNOps = Op Void BooleanBOp Void
+
+-- | Substitute terms for literals
+substVarsL :: forall var var' bop bflop val.
+    (ProperOpTag bop, ProperOpTag bflop)
+    => (var -> TermLit (Op BooleanUOp bop bflop) val var')
+    -> TermLit (Op BooleanUOp bop bflop) val var
+    -> TermLit (Op BooleanUOp bop bflop) val var'
+substVarsL f = TermLit . substVars f' . unTermLit where
+    f' :: Literal var -> Term (Op BooleanUOp bop bflop) val (Literal var')
+    f' (True, name)  = unTermLit $ f name
+    f' (False, name) = BNot $ unTermLit $ f name
 
 {-----------------------------------------------------------------------------}
 -- Utilities

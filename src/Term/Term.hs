@@ -1,0 +1,272 @@
+
+{-# LANGUAGE PatternSynonyms #-}
+
+{- | Generalized algebraic terms.
+
+These terms do /not/ support variable binders (like lambdas) - but they
+can compose arbitrary unary and binary operators, variable names and values.
+
+-}
+module Term.Term
+    (   Fix4(..)
+    ,   TermF(..)
+    ,   Term
+    ,   Op(..)
+
+    ,   pattern Val
+    ,   pattern Var
+    ,   pattern Rec
+    ,   pattern BUOp
+    ,   pattern BBOp
+    ,   pattern BFlOp
+
+    -- Kill with fire?
+    ,   ProperRecT(..)
+    ,   ProperOpTag(..)
+    ) where
+
+import Data.Kind (Type)
+import Data.Void
+import Data.Functor.Classes
+import Data.Traversable (foldMapDefault)
+import Control.Monad (ap)
+import Text.Show (showListWith)
+
+-- recursion-schemes
+import Data.Functor.Foldable
+
+import Missing.Void
+
+{-----------------------------------------------------------------------------}
+-- Terms, part 0: Fixpoint
+
+-- Fixpoint
+newtype Fix4 f a b c = Fix4 { unFix4 :: f a b c (Fix4 f a b c) }
+
+-- FIXME: Fix4 can actually even be an instance of Show2
+instance Show2 (f a b) => Show1 (Fix4 f a b) where
+    liftShowsPrec :: forall c. (Int -> c ->  ShowS) -> ([c] -> ShowS)
+        -> Int -> Fix4 f a b c -> ShowS
+    liftShowsPrec showC showListC = go where
+        go :: Int -> Fix4 f a b c -> ShowS
+        go d (Fix4 f) = liftShowsPrec2 showC showListC go (showListWith (go 0)) d f
+
+instance Show1 (f a b c) => Show (Fix4 f a b c) where
+    showsPrec :: Int -> Fix4 f a b c -> ShowS
+    showsPrec d (Fix4 f) = liftShowsPrec showsPrec showList d f
+
+instance Eq1 (f a b c) => Eq (Fix4 f a b c) where
+    (==) (Fix4 fa) (Fix4 fb) = eq1 fa fb
+
+-- Recursion-schemes base functor
+type instance Base (Fix4 f a b c) = f a b c
+
+instance Functor (f a b c) => Recursive (Fix4 f a b c) where
+    project = unFix4
+
+instance Functor (f a b c) => Corecursive (Fix4 f a b c) where
+    embed = Fix4
+
+-- IsoVoid
+instance (Functor (f a b c), IsoVoid (f a b c Void)) => IsoVoid (Fix4 f a b c) where
+    absurd' (Fix4 f) = absurd' $ fmap (absurd' :: Fix4 f a b c -> Void) f
+
+
+{-----------------------------------------------------------------------------}
+-- Terms, part 1: Term structure
+
+{- TODO: This creates existential types, which might cause problems later.
+Solve this by removing the class alltogether and augmenting all the
+type signatures.
+-}
+class (Show1 op, Eq1 op, Functor op, Foldable op, Traversable op) => ProperRecT op where
+
+data TermF
+    :: (Type -> Type) -> Type -> Type       -- Type parameters
+    -> Type                                 -- Recursive term
+    -> Type
+    where
+    ConstT      ::                  val ->      TermF op val var rec
+    VariableT   ::                  var ->      TermF op val var rec
+    RecT        :: ProperRecT op => op rec ->   TermF op val var rec
+
+deriving instance (Eq (op r), Eq val, Eq var) => Eq (TermF op val var r)
+deriving instance Functor (TermF op val var)
+
+-- Note: Our show instance will print the expression in forms of patterns
+-- This is contrary to what show usually does, but much easier to use
+instance Show val => Show2 (TermF op val) where
+    liftShowsPrec2 :: forall var a.
+           (Int -> var -> ShowS) -> ([var] -> ShowS)
+        -> (Int -> a -> ShowS) -> ([a] -> ShowS)
+        -> Int -> TermF op val var a -> ShowS
+    liftShowsPrec2 showVar _ showA showAL = go where
+        prec :: Int
+        prec = 10   -- same precedence for everyone
+        go :: Int -> TermF op val var a -> ShowS
+        go d = \case
+            ConstT v    -> showParen (d > prec) $
+                showString "Val " . shows v
+            VariableT v -> showParen (d > prec) $
+                showString "Var " . showVar d v
+            RecT v      -> liftShowsPrec showA showAL d v
+
+instance (Show val, Show var) => Show1 (TermF op val var) where
+    liftShowsPrec = liftShowsPrec2 showsPrec showList
+
+instance (Eq val, Eq var) => Eq1 (TermF op val var) where
+    liftEq _ (ConstT a) (ConstT b) = a == b
+    liftEq _ (VariableT a) (VariableT b) = a == b
+    liftEq f (RecT ra) (RecT rb) = liftEq f ra rb
+    liftEq _ _ _ = False
+
+instance Foldable (TermF op val var) where
+   foldMap = foldMapDefault
+
+instance Traversable (TermF op val var) where
+    traverse :: Applicative f => (a -> f b) -> TermF op val var a -> f (TermF op val var b)
+    traverse f = \case
+        (ConstT v)      -> pure (ConstT v)
+        (VariableT v)   -> pure (VariableT v)
+        (RecT op)       -> RecT <$> traverse f op
+
+{- Terms without values or variables don't exist, iff
+    op doesn't hold any constants.
+-}
+instance IsoVoid (op Void) => IsoVoid (TermF op Void Void Void) where
+    absurd' :: TermF op Void Void Void -> b
+    absurd' (ConstT v) = absurd v
+    absurd' (VariableT v) = absurd v
+    absurd' (RecT op) = absurd' op
+
+{-----------------------------------------------------------------------------}
+
+type Term = Fix4 TermF
+
+instance Foldable (Term op val) where
+   foldMap = foldMapDefault
+
+instance Traversable (Term op val) where
+    traverse :: Applicative f => (a -> f b) -> Term op val a -> f (Term op val b)
+    traverse f = \case
+        Fix4 (ConstT v)     -> pure $ embed $ ConstT v
+        Fix4 (VariableT v)  -> embed . VariableT <$> f v
+        Fix4 (RecT v)       -> embed . RecT <$> traverse (traverse f) v
+
+
+{-----------------------------------------------------------------------------}
+-- Functor, Applicative and Monad on Variables
+
+instance Functor (Term op val) where
+    fmap :: (a -> b) -> Term op val a -> Term op val b
+    fmap f (Fix4 term) = case term of
+        ConstT x    -> Fix4 $ ConstT x
+        VariableT v -> Fix4 $ VariableT (f v)
+        RecT op     -> Fix4 $ RecT $ (fmap . fmap) f op
+
+instance Applicative (Term op val) where
+    pure = return
+    (<*>) = ap
+
+instance Monad (Term op val) where
+    return :: a -> Term op val a
+    return = Fix4 . VariableT
+    (>>=) :: Term op val a -> (a -> Term op val b) -> Term op val b
+    Fix4 (VariableT v)  >>= f   = f v
+    Fix4 (ConstT x)     >>= _   = Fix4 $ ConstT x
+    Fix4 (RecT op)      >>= f   = Fix4 $ RecT $ fmap (>>= f) op
+
+{-----------------------------------------------------------------------------}
+-- Terms, part 2: Operators
+
+data Op
+    :: Type -> Type -> Type -> Type -> Type
+    where
+    UnaryOp     :: ProperOpTag uop =>   uop  -> rec ->         Op uop bop flop rec
+    BinaryOp    :: ProperOpTag bop =>   bop  -> rec -> rec ->  Op uop bop flop rec
+    FlatOp      :: ProperOpTag flop =>  flop -> [rec] ->       Op uop bop flop rec
+
+deriving instance Functor (Op uop bop flop)
+deriving instance Foldable (Op uop bop flop)
+deriving instance Traversable (Op uop bop flop)
+
+{-----------------------------------------------------------------------------}
+-- TODO: Just as bad as ProperRecT, remove it
+class (Show o, Eq o, Ord o) => ProperOpTag o where
+    opPrec :: o -> Int
+    opName :: o -> String
+    opName = show
+
+instance ProperOpTag Void where
+    opPrec = absurd
+
+instance (ProperOpTag a, ProperOpTag b, ProperOpTag c) => ProperRecT (Op a b c)
+{-----------------------------------------------------------------------------}
+
+instance Show1 (Op uop bop flop) where
+    liftShowsPrec :: forall a. (Int -> a -> ShowS) -> ([a] -> ShowS)
+        -> Int -> Op uop bop flop a -> ShowS
+    liftShowsPrec showsRec _ d = let
+        prec :: Int
+        prec = 10   -- same precedence for everyone in show
+        in \case
+        UnaryOp o t     -> showParen (d > prec) $
+            showString (opName o ++ " ") . showsRec (prec+1) t
+        BinaryOp o a b  -> showParen (d > prec) $
+            showsRec (prec+1) a . showString (" `" ++ opName o ++ "` ") . showsRec (prec+1) b
+        FlatOp o xs     -> showParen (d > prec) $
+            showString (opName o) .
+            showListWith (showsRec 0) xs
+
+instance Eq1 (Op a b c) where
+    liftEq :: (x -> x' -> Bool) -> Op a b c x -> Op a b c x' -> Bool
+    liftEq f (UnaryOp o x) (UnaryOp o' x') = (o == o') && f x x'
+    liftEq f (BinaryOp o a b) (BinaryOp o' a' b')
+        = (o == o') && f a a' && f b b'
+    liftEq f (FlatOp o xs) (FlatOp o' xs')
+        = (o == o') && liftEq f xs xs'
+    liftEq _ _ _ = False
+
+instance IsoVoid (Op uop bop Void Void) where
+    absurd' (UnaryOp _ r) = absurd r
+    absurd' (BinaryOp _ a _) = absurd a     -- which Void would you like? the left one?
+    absurd' (FlatOp op _) = absurd op
+
+{-----------------------------------------------------------------------------}
+-- And a few pattern synonyms for brevity
+
+pattern Val :: forall (op :: Type -> Type) val var.
+    val -> Term op val var
+pattern Var :: forall (op :: Type -> Type) val var.
+    var -> Term op val var
+pattern Rec :: forall (op :: Type -> Type) val var.
+    () => ProperRecT op
+    => op (Term op val var) -> Term op val var
+
+pattern BUOp
+    :: () => (ProperRecT (Op uop bop flop), ProperOpTag uop)
+    => uop
+    -> Term (Op uop bop flop) val var
+    -> Term (Op uop bop flop) val var
+pattern BBOp
+    :: () => (ProperRecT (Op uop bop flop), ProperOpTag bop)
+    => bop
+    -> Term (Op uop bop flop) val var
+    -> Term (Op uop bop flop) val var
+    -> Term (Op uop bop flop) val var
+pattern BFlOp
+    :: () => (ProperRecT (Op uop bop flop), ProperOpTag flop)
+    => flop
+    -> [Term (Op uop bop flop) val var]
+    -> Term (Op uop bop flop) val var
+
+pattern Val v       = Fix4 (ConstT v)
+pattern Var v       = Fix4 (VariableT v)
+pattern Rec v       = Fix4 (RecT v)
+
+pattern BUOp o a    = Fix4 (RecT (UnaryOp o a))
+pattern BBOp o a b  = Fix4 (RecT (BinaryOp o a b))
+pattern BFlOp o xs  = Fix4 (RecT (FlatOp o xs))
+
+{-# COMPLETE Var, Val, Rec #-}
+{-# COMPLETE Var, Val, BUOp, BBOp, BFlOp #-}
