@@ -62,6 +62,15 @@ generateMapping' term = let
     vars = Set.toList $ variableNames term
     in generateMapping vars
 
+-- | Generate a random assignment for variables @vars@
+-- Try a few times to satisfy a property (such as satisfying the term).
+tryGenerateMapping :: forall name. Ord name =>
+    Int -> (Map name Bool -> Bool) -> [name] -> Gen (Map name Bool)
+tryGenerateMapping tries test vars = resize tries $
+    generateMapping vars `suchThatMaybe` test >>= \case
+        Just mapping    -> return mapping
+        Nothing         -> generateMapping vars     -- give an arbitrary mapping
+
 -- TODO generalize and put into our Term library
 
 -- | Generate a boolean term of a maximum @size@ from atoms @vasr@ and @vals@

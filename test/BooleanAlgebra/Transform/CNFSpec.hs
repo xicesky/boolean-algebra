@@ -50,17 +50,25 @@ regression02Check cnf =
     -- N1P1 occurs at most once in each clause
     maximum (regression02Info cnf) == 1
 
-prop_CNF_preservesSoluations :: HasCallStack => BooleanExpr String -> Property
-prop_CNF_preservesSoluations t = propEqual t (toCNF t)
+prop_CNF_preservesSolutions :: HasCallStack => BooleanExpr String -> Property
+prop_CNF_preservesSolutions t = propEqual t (toCNF t)
+
+-- TODO: This test really requires a SAT solver to be reliable
+prop_CNF2_preservesSolutions :: HasCallStack => BooleanExpr String -> Property
+prop_CNF2_preservesSolutions t = propImplies (toCNF2 t) t
 
 spec_distributeToCNF = describe "distributeToCNF" $ do
     it "distributes correctly" $ distributeToCNF regression01In `shouldBe` regression01Ex
 
 spec_toCNF = describe "toCNF" $ do
     it "works on regression 02" $ toCNF regression02In `shouldSatisfy` regression02Check
-    prop "preserves soluations" $ mapSize (`div` 2) $ prop_CNF_preservesSoluations
+    prop "preserves solutions" $ mapSize (`div` 2) $ prop_CNF_preservesSolutions
+
+spec_toCNF2 = describe "toCNF2" $ do
+    prop "preserves solutions" $ mapSize (`div` 2) $ prop_CNF2_preservesSolutions
 
 spec :: Spec
 spec = do
     spec_distributeToCNF
     spec_toCNF
+    spec_toCNF2

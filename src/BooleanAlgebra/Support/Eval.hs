@@ -3,6 +3,7 @@ module BooleanAlgebra.Support.Eval
     (   Eval(..)
     ,   equalEval
     ,   propEqual
+    ,   propImplies
     ) where
 
 import Prelude hiding (and, or, not, (&&), (||))
@@ -18,7 +19,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 -- quickcheck
-import Test.QuickCheck (Property, forAll, (===))
+import Test.QuickCheck (Property, forAll, (===), (==>))
 
 import Missing.Void
 import Term.Term
@@ -105,6 +106,40 @@ propEqual t1 t2 = let
         lhs = eval (env Map.!) t1
         rhs = eval (env Map.!) t2
         in
-        -- trace ("equalEval " ++ show t1 ++ " " ++ show t2 ++ ":\n"
+        -- trace ("propEqual " ++ show t1 ++ " " ++ show t2 ++ ":\n"
         -- ++ "    " ++ show lhs ++ " == " ++ show rhs) $
         lhs === rhs
+
+{- | Comparing of two terms of possibly different types where
+finding a solution for @t1@ /implies/ a solution for @t2@
+but not the other way around. Useful for testing the 'tseitinTransform'',
+because it adds additional variables.
+
+_Warning_: This property tries to generate mappings that satisfy @t1@,
+but it cannot quickly find them. So this will be slow for hardly satisfiable
+terms @t1@.
+-}
+propImplies :: forall name f g. (HasCallStack
+    , Show name, Ord name
+    , Show (f name), Show (g name)
+    , HasNames (f name), HasNames (g name)
+    , NameT (f name) ~ name, NameT (g name) ~ name
+    , Eval f name, Eval g name
+    )
+    => f name -> g name -> Property
+propImplies t1 t2 = let
+    vars :: Set name
+    vars = Set.union (variableNames t1) (variableNames t2)
+    test :: Map name Bool -> Bool
+    test env = eval (env Map.!) t1
+    in forAll (tryGenerateMapping 5 test (Set.toList vars)) $ \env ->
+        -- trace ("XXX " ++ show env) $
+        let
+        lhs = eval (env Map.!) t1
+        rhs = eval (env Map.!) t2
+        in
+        -- trace ("propImplies " ++ show t1 ++ " " ++ show t2 ++ ":\n"
+        -- ++ "    " ++ show lhs ++ " == " ++ show rhs) $
+        -- lhs ==> rhs      -- fails if lhs is UNSAT!
+        -- trace ("propImplies " ++ show lhs ++ " " ++ show rhs) $
+        not lhs || rhs
