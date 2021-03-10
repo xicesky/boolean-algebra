@@ -30,10 +30,10 @@ library
       BooleanAlgebra.Base.Expression
       BooleanAlgebra.Base.Logic
       BooleanAlgebra.Base.Pretty
-      BooleanAlgebra.Eval
       BooleanAlgebra.Examples
       BooleanAlgebra.Ideas
       BooleanAlgebra.Support.Arbitrary
+      BooleanAlgebra.Support.Eval
       BooleanAlgebra.Transform.CNF
       BooleanAlgebra.Transform.Simplify
       BooleanAlgebra.Transform.Variable

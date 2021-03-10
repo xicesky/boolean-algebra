@@ -1,6 +1,7 @@
 
 module BooleanAlgebra.Transform.CNFSpec where
 
+import Data.Void
 import Control.Monad (join)
 import Data.Foldable (toList)
 import Data.List (elemIndex)
@@ -10,21 +11,24 @@ import Test.Hspec.QuickCheck
 import Test.QuickCheck
 import Test.QuickCheck.Instances ()
 
+import Term.Term
 import BooleanAlgebra
-import BooleanAlgebra.Transform.IntermediateForms
 import BooleanAlgebra.Examples
 import qualified BooleanAlgebra.Base.Logic as L
+import BooleanAlgebra.Support.Eval
 
-regression01In :: BooleanExprFlatLit
-regression01In = iConjunction [ iDisjunction
-    [   iConjunction [ iLit c | c <- [1..3] ]
-    ,   iConjunction [ iLit c | c <- [4..6] ]
+regression01In :: TermLit BFlOps Void Int
+regression01In = TermLit $ BConj [ BDisj
+    [   BConj [ Var (Lit c) | c <- [1..3] ]
+    ,   BConj [ Var (Lit c) | c <- [4..6] ]
     ]]
 
-regression01Ex :: CNF
-regression01Ex = Conjunction [ Disjunction [ BooleanLit c1, BooleanLit c2 ] | c1 <- [1..3], c2 <- [4..6] ]
+regression01Ex :: CNF Int
+regression01Ex = CNF $ Conjunction [
+    Disjunction [ Lit c1, Lit c2 ] | c1 <- [1..3], c2 <- [4..6]
+    ]
 
-regression02In :: BooleanExpr
+regression02In :: BooleanExpr String
 regression02In = let
     isAt :: BooleanAlgebra b => Int -> Int -> b
     isAt n i = var $ "N" ++ show n ++ "P" ++ show i
@@ -37,24 +41,24 @@ count :: Eq a => (a -> Bool) -> [a] -> Int
 count x = length . filter x
 
 -- Count appeareances of "N1P1" per clause
-regression02Info :: [String] -> CNF -> [Int]
-regression02Info names (Conjunction xs) = let
-    n1p1Index :: Int
-    Just n1p1Index = elemIndex "N1P1" names
-    in fmap (count ((== n1p1Index) . unLit) . toList) xs
+regression02Info :: CNF String -> [Int]
+regression02Info (CNF (Conjunction xs)) =
+    fmap (count ((== "N1P1") . snd) . toList) xs
 
-regression02Check :: Named CNF -> Bool
-regression02Check (Named names cnf) =
+regression02Check :: CNF String -> Bool
+regression02Check cnf =
     -- N1P1 occurs at most once in each clause
-    maximum (regression02Info names cnf) == 1
+    maximum (regression02Info cnf) == 1
 
-toCNF' = toNamed . toCNF
+prop_CNF_preservesSoluations :: HasCallStack => BooleanExpr String -> Property
+prop_CNF_preservesSoluations t = propEqual t (toCNF t)
 
 spec_distributeToCNF = describe "distributeToCNF" $ do
     it "distributes correctly" $ distributeToCNF regression01In `shouldBe` regression01Ex
 
 spec_toCNF = describe "toCNF" $ do
-    it "works on regression 02" $ toCNF' regression02In `shouldSatisfy` regression02Check
+    it "works on regression 02" $ toCNF regression02In `shouldSatisfy` regression02Check
+    prop "preserves soluations" $ mapSize (`div` 2) $ prop_CNF_preservesSoluations
 
 spec :: Spec
 spec = do

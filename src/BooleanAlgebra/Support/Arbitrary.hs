@@ -12,52 +12,91 @@ import Test.QuickCheck.Gen
 import Test.QuickCheck.Arbitrary
 import Test.QuickCheck.Modifiers
 
+-- containers
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
+
+import Term.Term
+
 import BooleanAlgebra.Base.Class
 import BooleanAlgebra.Base.Expression
-import BooleanAlgebra.Base.Pretty
+-- import BooleanAlgebra.Base.Pretty
+import BooleanAlgebra.Transform.Variable
 
--- import BooleanAlgebra.Transform.IntermediateForms
 -- import BooleanAlgebra.Transform.Simplify
 -- import BooleanAlgebra.Transform.CNF
 
+import GHC.Stack (HasCallStack)
 -- import Debug.Trace
 
--- chooseB :: Gen Bool
--- chooseB = chooseEnum (minBound, maxBound)
+{- | Choose between two alternatives, with
+    @x@ in @n@ chances to take the first
+-}
+choiceOf :: Int -> Int -> Gen a -> Gen a -> Gen a
+choiceOf x n a b = chooseInt (1, n) >>= \case
+    i   | i <= x    -> a
+    i               -> b
 
--- generateBoolean :: forall b. Boolean b => [b] -> Gen b
--- generateBoolean atoms = let
---     literal :: Gen b
---     literal = do
---         sign <- chooseB
---         ifthenelse sign id not <$> elements atoms
---     term :: Int -> Gen b
---     term x | x <= 0   = literal
---     term size  = -- trace ("term " ++ show size) $
---         chooseInt (0,9) >>= \case
---         0            -> literal
---         1            -> not <$> term (size - 1)
---         n   | even n -> and <$> term (size `div` 2) <*> term (size `div` 2)
---         n   | odd n  -> or  <$> term (size `div` 2) <*> term (size `div` 2)
---     in sized term
+-- | Generate a single boolean value
+chooseB :: Gen Bool
+chooseB = chooseEnum (minBound, maxBound)
 
--- generateVarName :: Gen String
--- generateVarName = do
---     l <- (`div` 10) <$> getSize
---     vectorOf l (elements ['a'..'z'])
--- -- generateVarName = getPrintableString <$> arbitrary
--- -- generateVarName = getUnicodeString <$> arbitrary
+-- | Generate a list of @n@ booleans
+chooseBs :: Int -> Gen [Bool]
+chooseBs n = vectorOf n chooseB
 
+-- | Generate a random assignment for variables @vars@
+generateMapping :: forall name. Ord name =>
+    [name] -> Gen (Map name Bool)
+generateMapping vars = do
+        vals <- chooseBs (length vars)
+        return $ Map.fromList $ zip vars vals
 
--- generateBA :: forall b. BooleanAlgebra b => Gen b
--- generateBA = do
---     n <- getSize
---     -- overlapping variables aren't a problem here
---     vars <- vectorOf n (var <$> generateVarName)
---     generateBoolean (true : false : vars)
+-- | Generate a random assignment for variables in term @t@
+generateMapping' :: forall t. (HasNames t, Ord (NameT t)) =>
+    t -> Gen (Map (NameT t) Bool)
+generateMapping' term = let
+    vars :: [NameT t]
+    vars = Set.toList $ variableNames term
+    in generateMapping vars
 
--- instance Arbitrary BooleanExpr where
---     arbitrary = generateBA
+-- TODO generalize and put into our Term library
+
+-- | Generate a boolean term of a maximum @size@ from atoms @vasr@ and @vals@
+generateTerm :: forall var val. HasCallStack
+    => Int -> [var] -> [val] -> Gen (Term BOps val var)
+generateTerm size vars vals = term size where
+    atom :: Gen (Term BOps val var)
+    atom    | null vals = Var <$> elements vars
+            | otherwise = choiceOf 1 6 (Val <$> elements vals) (Var <$> elements vars)
+    term :: Int -> Gen (Term BOps val var)
+    term x | x <= 0     = atom
+    term size           = -- trace ("term " ++ show size) $
+        chooseInt (0,9) >>= \case
+        0            -> atom
+        1            -> not <$> term (size - 1)
+        n   | even n -> and <$> term (size `div` 2) <*> term (size `div` 2)
+        n   | odd n  -> or  <$> term (size `div` 2) <*> term (size `div` 2)
+
+generateVarName :: Gen String
+generateVarName = do
+    l <- (`div` 10) <$> getSize
+    vectorOf l (elements ['a'..'z'])
+-- generateVarName = getPrintableString <$> arbitrary
+-- generateVarName = getUnicodeString <$> arbitrary
+
+generateBA :: forall b. BooleanAlgebra b => Gen b
+generateBA = do
+    n <- getSize
+    -- overlapping variables aren't a problem here
+    vars <- vectorOf (n+1) generateVarName
+    (term :: Term BOps Bool String) <- generateTerm n vars []
+    return $ interpretAlg term
+
+instance Arbitrary (BooleanExpr String) where
+    arbitrary = generateBA
 
 -- -- FIXME: Weird slow and ineffective
 -- -- Generate BooleanExprLit directly instead

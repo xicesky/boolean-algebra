@@ -63,8 +63,6 @@ pushNegations' term = cata pushNeg term True where
 {-----------------------------------------------------------------------------}
 -- Flattening
 
-type BNFlOps = Op Void Void BooleanFlatOp
-
 flatten' :: forall uop val var. ProperOpTag uop
      => Term (Op uop BooleanBOp Void) val var -> Term (Op uop Void BooleanFlatOp) val var
 flatten' = cata flat where
@@ -92,14 +90,14 @@ that by using type applications, e.g.:
 
 >>> flatten @Bool @String $ constantFold demo2b
 -}
-flatten :: forall val var t. (t :<: Term BNOps val var) => t -> Term BNFlOps val var
+flatten :: forall val var t. (t :<: Term BNOps val var) => t -> Term BFlOps val var
 flatten = flatten' . inject
 
 {-----------------------------------------------------------------------------}
 -- Simplifier
 -- Doesn't currently simplify a lot
 
-simplify :: (t a :<: Term BOps Bool a) => t a -> TermLit BNFlOps Void a
+simplify :: (t a :<: Term BOps Bool a) => t a -> TermLit BFlOps Void a
 simplify term = case constantFold term of
     Left True -> TermLit $ BConj []
     Left False -> TermLit $ BDisj []

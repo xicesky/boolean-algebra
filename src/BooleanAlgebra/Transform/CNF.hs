@@ -56,9 +56,9 @@ cnfStats (CNF (Conjunction xs)) = CNFStats
 -- Distributes disjunctions over conjunctions:
 --      a ∨ (b ∧ c) = (a ∨ b) ∧ (a ∨ c)
 
-distributeToCNF :: forall a. TermLit BNFlOps Void a -> CNF a
+distributeToCNF :: forall a. TermLit BFlOps Void a -> CNF a
 distributeToCNF = cata distr . unTermLit where
-    distr :: Alg (TermF BNFlOps Void (Literal a)) (CNF a)
+    distr :: Alg (TermF BFlOps Void (Literal a)) (CNF a)
     distr (ConstT x) = absurd x
     distr (VariableT x) = CNF $ (pure . pure) x
     distr (RecT (UnaryOp op _)) = absurd op

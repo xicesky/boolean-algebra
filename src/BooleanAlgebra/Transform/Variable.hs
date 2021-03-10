@@ -1,8 +1,23 @@
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
--- FIXME: This is not specific to BooleanAlgebra, move to Term
-module BooleanAlgebra.Transform.Variable where
+-- FIXME: Most of this is not specific to BooleanAlgebra, move to Term
+module BooleanAlgebra.Transform.Variable
+    (   HasNames(..)
+    ,   MappedNames(..)
+    ,   Context(..)
+    ,   getNameMap
+    ,   getIndexMap
+    ,   buildContext
+    ,   destroyContext
+    ,   findFreshName
+    ,   FreshState
+    ,   MonadFresh(..)
+    ,   FreshT
+    ,   runFreshT
+    ) where
+
+import Data.Kind (Type)
 
 -- containers
 import Data.Map.Strict (Map)
@@ -16,6 +31,30 @@ import Control.Monad.State
 import Control.Monad.Writer
 
 import Term.Term
+
+import BooleanAlgebra.Base.Expression
+
+{-----------------------------------------------------------------------------}
+-- Simple tools
+
+class HasNames t where
+    type NameT t :: Type
+    variableNames :: t -> Set (NameT t)
+
+instance Ord name => HasNames (Term op val name) where
+    type NameT (Term op val name) = name
+    variableNames :: Term op val name -> Set name
+    variableNames = foldMap Set.singleton
+
+instance Ord name => HasNames (TermLit op val name) where
+    type NameT (TermLit op val name) = name
+    variableNames :: TermLit op val name -> Set name
+    variableNames = foldMap Set.singleton
+
+instance Ord name => HasNames (CNF name) where
+    type NameT (CNF name) = name
+    variableNames :: CNF name -> Set name
+    variableNames = foldMap Set.singleton
 
 {-----------------------------------------------------------------------------}
 -- Handling mapped variables

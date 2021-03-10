@@ -92,3 +92,15 @@ instance BooleanArithmetic Bool where
 ifthenelse :: Bool -> a -> a -> a
 ifthenelse True a _ = a
 ifthenelse False _ b = b
+
+{-----------------------------------------------------------------------------}
+
+-- | Terms that can be interpreted as boolean arithmetic
+class InterpretBooleanArithmetic t where
+    -- | Interpet a term @t@ in a boolean arithmetic.
+    interpretArith :: forall a. BooleanArithmetic a => t -> a
+
+-- | Terms that can be interpreted as boolean algebra
+class InterpretBooleanAlgebra t where
+    -- | Interpet a term @t@ in a boolean algebra.
+    interpretAlg :: forall a. BooleanAlgebra a => t -> a

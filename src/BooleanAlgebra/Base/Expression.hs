@@ -50,14 +50,14 @@ instance ProperOpTag BooleanFlatOp where
 -- Show1 instance for Op is below
 
 type BOps = Op BooleanUOp BooleanBOp Void
-type BFlOps = Op BooleanUOp Void BooleanFlatOp
+type BFlOps = Op Void Void BooleanFlatOp
 
 -- | "Standard" boolean expressions
 -- use ⊤, ⊥, ¬, ∧, ∨ and variables
 type BooleanExpr            = Term BOps Bool
 
 -- | Boolean expressions with flattened operators
-type BooleanExprFlat        = Term BFlOps Bool
+--type BooleanExprFlat        = Term BFlOps Bool
 
 -- Dumb idea? This looks very nice because the Bool gets /factored out/ in the type!
 --type BooleanValue = Term VoidF Bool Void
@@ -98,20 +98,34 @@ pattern BDisj xs    = Fix4 (RecT (FlatOp BDisjunction xs))
 
 {-----------------------------------------------------------------------------}
 
-instance PreBoolean (BooleanExpr a) where
+instance PreBoolean (Term BOps val var) where
     not a   = BNot a
 
-instance Boolean (BooleanExpr a) where
+instance Boolean (Term BOps val var) where
     and a b = BAnd a b
     or a b  = BOr a b
 
-instance BooleanArithmetic (BooleanExpr a) where
+instance BooleanArithmetic (Term BOps Bool var) where
     fromBool = Val
 
-instance BooleanPreAlgebra (BooleanExpr String) where
+instance BooleanPreAlgebra (Term BOps val String) where
     var = Var
 
-instance BooleanAlgebra (BooleanExpr String)
+instance BooleanAlgebra (Term BOps Bool String)
+
+instance InterpretBooleanArithmetic (Term BOps Bool Void) where
+    interpretArith (Val v)      = fromBool v
+    interpretArith (Var v)      = absurd v
+    interpretArith (BNot x)     = not (interpretArith x)
+    interpretArith (BAnd a b)   = and (interpretArith a) (interpretArith b)
+    interpretArith (BOr a b)    = or (interpretArith a) (interpretArith b)
+
+instance InterpretBooleanAlgebra (Term BOps Bool String) where
+    interpretAlg (Val v)    = fromBool v
+    interpretAlg (Var v)    = var v
+    interpretAlg (BNot x)   = not (interpretAlg x)
+    interpretAlg (BAnd a b) = and (interpretAlg a) (interpretAlg b)
+    interpretAlg (BOr a b)  = or (interpretAlg a) (interpretAlg b)
 
 {-----------------------------------------------------------------------------}
 -- Various little helpers
@@ -125,6 +139,11 @@ invertOp BooleanOr = BooleanAnd
 
 -- | A /literal/ is a variable with a sign
 type Literal a = (Bool, a)
+
+-- Pattern, for example @Lit "x"@ or @not (Lit "x")@
+pattern Lit :: a -> Literal a
+pattern Lit a   <- (_, a) where
+    Lit a = (True, a)
 
 instance PreBoolean (Literal a) where
     -- litNeg (b, v) = (not b, v)
@@ -171,6 +190,7 @@ data Disjunction e = Disjunction [e]
 newtype CNF name = CNF { unCNF :: Conjunction (Disjunction (Literal name)) }
 
 deriving instance Show name => Show (CNF name)
+deriving instance Eq name => Eq (CNF name)
 deriving instance Functor CNF
 deriving instance Foldable CNF
 deriving instance Traversable CNF
