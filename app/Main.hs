@@ -1,9 +1,13 @@
+
 module Main where
 
+import qualified Data.Map.Strict as Map
 import Criterion.Main
 
 import BooleanAlgebra
 import BooleanAlgebra.Examples
+import BooleanAlgebra.Support.Minisat
+import Gen
 
 {- Notes & interesting reads:
     https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
@@ -35,8 +39,27 @@ standardDemo = do
     demo exampleExpr05
     putStrLn ""
 
+formatMinisatResult :: forall a. (Show a, Ord a) => MinisatResult a -> String
+formatMinisatResult = \case
+    Sat map -> Map.foldrWithKey showsEntry id map ""
+    other   -> show other
+    where
+        showsEntry :: a -> Bool -> ShowS -> ShowS
+        showsEntry name value rest =
+            showString "    " . shows name
+            . showString " = " . shows value
+            . showString "\n" . rest
+
+minisatDemo :: IO ()
+minisatDemo = do
+    result <- runMinisat "minisat" (toCNF2 (sortList :: BooleanExpr String))
+    -- putStrLn $ show result
+    putStrLn $ formatMinisatResult result
+
 main :: IO ()
-main = standardDemo
+main =
+    -- standardDemo
+    minisatDemo
 
 -- TODO: Use criterion for benchmarks.
 

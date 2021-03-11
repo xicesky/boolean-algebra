@@ -29,6 +29,9 @@ sortList = let
     isAt :: BooleanAlgebra b => Int -> Int -> b
     isAt n i = var $ "N" ++ show n ++ "P" ++ show i
 
+    -- | The number i is smaller than the number j
+    smallerThan i j = var $ "N" ++ show i ++ "LN" ++ show j
+
     -- | Three numbers, three indices
     ns :: [Int]
     ns = [1..3]
@@ -38,8 +41,24 @@ sortList = let
             forAll ns $ \number ->
             existsUnique ns $ \position ->
             number `isAt` position
+        ,   -- Each position has a number
+            forAll ns $ \position ->
+            exists ns $ \number ->
+            number `isAt` position
+        ,   -- The number i at px is smaller than j at py
+            -- if x is left of y
+            forAll ns $ \px ->
+            forAll ns $ \py ->
+            forAll ns $ \i ->
+            forAll ns $ \j ->
+            given (px < py) $
+            ((i `isAt` px) && (j `isAt` py))
+            `implies` (i `smallerThan` j)
+        ,   -- Encode when exactly numbers are smaller
+            forAll ns $ \i ->
+            forAll ns $ \j ->
+            define (i `smallerThan` j) (i < j)
         ]
-
 
 {-----------------------------------------------------------------------------}
 -- Sudoku WIP

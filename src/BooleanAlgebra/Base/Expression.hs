@@ -209,12 +209,12 @@ substVarsL f = TermLit . substVars f' . unTermLit where
 
 -- | Boolean conjunctions of arbitrary length
 -- a.k.a. "flattened" and expressions
-data Conjunction e = Conjunction [e]
+newtype Conjunction e = Conjunction { unConjunction :: [e] }
     deriving (Show, Eq, Functor, Foldable, Traversable)
 
 -- | Boolean disjunctions of arbitrary length
 -- a.k.a. "flattened" or expressions
-data Disjunction e = Disjunction [e]
+newtype Disjunction e = Disjunction { unDisjunction :: [e] }
     deriving (Show, Eq, Functor, Foldable, Traversable)
 
 -- | Conjunctive normal form

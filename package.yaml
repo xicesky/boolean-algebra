@@ -30,6 +30,11 @@ dependencies:
 - unordered-containers
 - sky-utils
 - recursion-schemes
+- text
+- bytestring
+- attoparsec
+- temporary
+- process
 - criterion
 - QuickCheck
 
