@@ -32,6 +32,8 @@ invokeMinisat minisatFP input = withSystemTempDirectory "ba" $ \tempdir -> let
     outputFP = tempdir ++ "/output.minisat"
     in do
         MIO.writeFile inputFP input
+        -- putStrLn $ textualToString input
+        putStrLn "Invoking Minisat..." -- TODO remove
         (exitCode, stdOut, stdErr) <- readProcessWithExitCodeInt
             minisatFP [ inputFP, outputFP ] ""
         putStr stdOut
@@ -52,7 +54,7 @@ runMinisat' minisat cnf =
 runMinisat :: Ord name => FilePath -> CNF name -> IO (MinisatResult name)
 runMinisat minisat cnf = let
     Context (_, iton) cnfi = buildContext cnf
-    in runMinisat minisat cnfi >>= \case
+    in runMinisat' minisat cnfi >>= \case
         Sat map -> return $ Sat $ fmap (map Map.!) iton
         Unsat   -> return Unsat
         Error e -> return $ Error e

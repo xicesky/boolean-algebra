@@ -119,19 +119,29 @@ instance Textual ASCIIBuilder where
 
 {-----------------------------------------------------------------------------}
 
--- | A type for building UTF-8 text
-newtype UTF8Builder = UTF8Builder { unUTF8Builder :: Builder }
+--newtype UTF8Builder = UTF8Builder { unUTF8Builder :: Builder }
 
---deriving instance Show UTF8Builder
-deriving instance Semigroup UTF8Builder
-deriving instance Monoid UTF8Builder
+-- | We assume that unwrapped ByteString.Builder instances handle UTF8
+type UTF8Builder = Builder
+
+-- deriving instance Show UTF8Builder
+-- deriving instance Semigroup UTF8Builder
+-- deriving instance Monoid UTF8Builder
+
+-- instance Textual UTF8Builder where
+--     textualToString = T.unpack . textualToText
+--     tChar = UTF8Builder . char8
+--     tString = UTF8Builder . string8
+--     textualToText = decodeUtf8 . toStrictByteString . unUTF8Builder
+--     tIntDec = UTF8Builder . intDec
+--     tIntegerDec = UTF8Builder . integerDec
 
 instance Textual UTF8Builder where
     textualToString = T.unpack . textualToText
-    tChar = UTF8Builder . char8
-    tString = UTF8Builder . string8
-    textualToText = decodeUtf8 . toStrictByteString . unUTF8Builder
-    tIntDec = UTF8Builder . intDec
-    tIntegerDec = UTF8Builder . integerDec
+    tChar = char8
+    tString = string8
+    textualToText = decodeUtf8 . toStrictByteString
+    tIntDec = intDec
+    tIntegerDec = integerDec
 
 {-----------------------------------------------------------------------------}

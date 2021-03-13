@@ -21,6 +21,10 @@ import Data.Proxy
 
 import Term.Term
 
+{-  Inspired by:
+    https://bahr.io/pubs/files/serrano15haskell-paper.pdf
+-}
+
 data Injection
     = IHere
     | IVoid     -- annoying special case for Void
