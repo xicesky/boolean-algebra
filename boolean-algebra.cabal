@@ -39,15 +39,12 @@ library
       BooleanAlgebra.Transform.CNF
       BooleanAlgebra.Transform.Simplify
       BooleanAlgebra.Transform.Variable
-      ConstrainedMonadic
-      CustomCompData
       Gen
       Interactive
       Missing.IO
       Missing.Misc
       Missing.Textual
       Missing.Void
-      Nondeterminism
       Term.Inject
       Term.Substitution
       Term.Term
