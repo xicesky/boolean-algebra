@@ -32,6 +32,22 @@ import Term.Variable.Names
 
 {- | A context over a structure @f@ maps the variable numbers
 in @f Int@ to names @name@.
+
+#warning#
+/Warning/: This assumes that @f@ is a 'Functor' over variable names.
+If your varaibles contain additional information (for example a /sign/
+or source location annotations), then these would be considered
+/part of the name/!
+
+For example: Consider a term over variables with an additional
+Boolean:
+
+>>> term :: Term op val (Bool, String)
+
+Creating a 'Context' (using 'buildContext') directly over this term
+would build a mapping @(Bool, String) \<-\> Int@, which means the variables
+(True, "a") and (False, "a") are considered to be different names.
+
 -}
 data Context f name = Context
     {   getMappedNames :: MappedNames name
@@ -49,10 +65,11 @@ getIndexMap = snd . getMappedNames
 deriving instance (Show (f Int), Show name) => Show (Context f name)
 deriving instance (Eq (f Int), Eq name) => Eq (Context f name)
 
--- FIXME: Wrong for: Term op val (Bool, String)
--- It would build a name map from LITERALS to Ints
--- Demo:
--- >>> buildContext $ simplify demo1b
+{- | Build a context over any 'Traversable' functor containing
+variable names.
+
+Please see the [warning about names](#warning).
+-}
 buildContext :: forall f name. (Traversable f, Ord name)
     => f name -> Context f name
 buildContext t = let
@@ -62,6 +79,11 @@ buildContext t = let
     indexNames = (Map.!) (snd mappedNames)
     in Context mappedNames (fmap indexNames t)
 
+{- | Destroy a @Context f name@ to yield the original
+'Traversable' @f name@.
+
+This is the inverse of 'buildContext'.
+-}
 destroyContext :: forall f name. (Traversable f, Ord name)
     => Context f name -> f name
 destroyContext (Context mappedNames t) = let
@@ -80,4 +102,3 @@ the variables will become indistinguishable.
 -- TODO: Could be much more efficient than rebuilding the whole context
 ctxRenameVars :: (Traversable f, Ord a, Ord b) => (a -> b) -> Context f a -> Context f b
 ctxRenameVars rename = buildContext . fmap rename . destroyContext
-

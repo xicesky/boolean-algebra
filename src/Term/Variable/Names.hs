@@ -12,6 +12,7 @@ module Term.Variable.Names
     ,   -- * Bidirectional name map
         MappedNames
     ,   mkMappedNames
+    ,   mappedNames
     ,   mappedHasName
     ,   mappedInsert
     ) where
@@ -28,6 +29,7 @@ import Term.Term
 
 {-----------------------------------------------------------------------------}
 
+-- | Types that contain variable names
 class HasNames t where
     type NameT t :: Type
     variableNames :: t -> Set (NameT t)
@@ -54,11 +56,15 @@ mkMappedNames nSet = let
     nList = Set.toList nSet
     in (Map.fromList $ zip [1..] nList, Map.fromList $ zip nList [1..])
 
+-- | Utility functions that works on types implementing 'HasNames'
+mappedNames :: (HasNames t, Ord (NameT t)) => t -> MappedNames (NameT t)
+mappedNames = mkMappedNames . variableNames
+
 -- | Check if @name@ is mapped.
 mappedHasName :: Ord name => MappedNames name -> name -> Bool
 mappedHasName (_, m) name = Map.member name m
 
-{- | Insert a new mapping @Int <-> name@ into the map.
+{- | Insert a new mapping @Int \<-\> name@ into the map.
 
 Since mappings are unique, this function will fail with @error@, if
 you try to (re-)map an existing name or existing variable.

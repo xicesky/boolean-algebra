@@ -7,6 +7,9 @@ Stability       : experimental
 
 A monad (monad tranformer actually) and utilities to create
 fresh variable names "on-the-fly" when building terms.
+
+A /fresh/ name is a name that isn't already used (for example
+as a free variable in a term).
 -}
 module Term.Variable.FreshT
     (   -- * FreshT
@@ -36,6 +39,11 @@ import Term.Variable.Context
 
 {-----------------------------------------------------------------------------}
 
+{- | Find a fresh name
+
+Given a map of existing names, produce a new name that is not
+in the map. This does /not/ insert a mapping for that new name.
+-}
 findFreshName :: MappedNames String -> String -> String
 findFreshName m prefix = head $ dropWhile exists' varnames where
     suffixes :: [String]
@@ -49,20 +57,23 @@ findFreshName m prefix = head $ dropWhile exists' varnames where
 {-----------------------------------------------------------------------------}
 -- Monad for fresh names
 
--- Not "splitable" for now
+{- | Internal state of 'FreshT'.
+-}
 data FreshState = FreshState
-    {   fsNextIndex :: Int
-    ,   fsPrefix :: String
-    ,   fsNames :: MappedNames String
+    {   fsNextIndex :: Int              -- ^ the next free integer index
+    ,   fsPrefix :: String              -- ^ the default prefix for fresh names
+    ,   fsNames :: MappedNames String   -- ^ mapping @name \<-\> Int@
     }
     deriving (Show, Eq)
 
+-- | Create a fresh name (internal)
 fsMkFreshName :: String -> FreshState -> (Int, FreshState)
 fsMkFreshName prefix (FreshState index p names) = let
     name :: String
     name = findFreshName names prefix
     in (index, FreshState (index+1) p (mappedInsert index name names))
 
+-- | Monad transformer with the ability to create fresh names.
 newtype FreshT m a = FreshT { toStateT :: StateT FreshState m a }
     --deriving (Functor, Monad, MonadTrans, MonadIO)
 
@@ -74,6 +85,11 @@ deriving instance MonadTrans FreshT
 deriving instance MonadIO m => MonadIO (FreshT m)
 -- ... and so on... implement as we need it
 
+{- | Monad tranformer interface
+
+This should be implemented for all monads that provide fresh names,
+most likely stacks of monad tranformers that use 'FreshT'.
+-}
 class MonadFresh m where
     freshName :: String -> m Int
 
@@ -83,6 +99,7 @@ instance Monad m => MonadFresh (FreshT m) where
 
 -- FIXME: get some proper names for those functions, these here are horrible
 
+-- Run the 'FreshT' monad transformer.
 runFreshT :: Monad m => FreshT m a -> MappedNames String -> m (a, MappedNames String)
 runFreshT fresh mapped = let
     maxI :: Int
