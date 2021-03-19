@@ -51,6 +51,9 @@ library
       Term.Inject
       Term.Substitution
       Term.Term
+      Term.Variable.Context
+      Term.Variable.FreshT
+      Term.Variable.Names
   other-modules:
       Paths_boolean_algebra
   hs-source-dirs:

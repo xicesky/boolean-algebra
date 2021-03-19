@@ -53,7 +53,7 @@ formatMinisatResult = \case
 minisatDemo :: IO ()
 minisatDemo = do
     let cnf = toCNF2 (sortList :: BooleanExpr String)
-    putStrLn $ show $ cnfStats cnf
+    print $ cnfStats cnf
     result <- runMinisat "minisat" cnf
     -- putStrLn $ show result
     putStrLn $ formatMinisatResult result
