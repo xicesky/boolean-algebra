@@ -29,6 +29,10 @@ dependencies:
 - containers
 - unordered-containers
 - sky-utils
+- optics
+- optics-core
+- optics-extra
+- optics-th
 - recursion-schemes
 - text
 - bytestring

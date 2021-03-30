@@ -42,17 +42,33 @@ import qualified Prelude as P
 In Haskell we can't make boolean values use negative signs.
 -}
 class PreBoolean b where
-    {- | Negations. Guarantees: @not (not a) == a@.
+    -- FIXME: How to provide an actual law without specifying eval?
+    {- | Negation, ¬
+        Guarantees: @not (not a) ~ a@.
     -}
     not :: b -> b
 
 -- | Anything that has boolean operations
 class PreBoolean b => Boolean b where
+    {-# MINIMAL and, or #-}
+    -- FIXME: How to provide an actual law without specifying eval?
+    {- | Conjunction, ∧
+    -}
     and :: b -> b -> b
+
+    {- | Disjunction, ∨
+    -}
     or :: b -> b -> b
 
+    {- | Exclusive or, ⊕
+    -}
     xor :: b -> b -> b
     xor a b = a && not b || not a && b
+
+    {- | Exclusive nor, ⊙
+    -}
+    xnor :: b -> b -> b
+    xnor a b = a && b || not a && not b
 
 -- | Boolean /conjunction/ operator.
 infixr 3 &&

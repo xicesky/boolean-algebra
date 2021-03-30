@@ -106,6 +106,7 @@ implies a b = not a || b
 -- | If and only if (Material biconditional)
 iff :: Boolean b => b -> b -> b
 iff a b = (a `implies` b) && (b `implies` a)
+-- = a `xnor` b -- but this is DNF
 
 {- | Test a value using a Haskell predicate.
 

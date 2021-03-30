@@ -53,8 +53,8 @@ runMinisat' minisat cnf =
 -- | Run minisat (or compatible solver) on a CNF problem, preserving variable names
 runMinisat :: Ord name => FilePath -> CNF name -> IO (MinisatResult name)
 runMinisat minisat cnf = let
-    Context (_, iton) cnfi = buildContext cnf
+    Context (_, ntoi) cnfi = buildContext cnf
     in runMinisat' minisat cnfi >>= \case
-        Sat map -> return $ Sat $ fmap (map Map.!) iton
+        Sat map -> return $ Sat $ fmap (map Map.!) ntoi
         Unsat   -> return Unsat
         Error e -> return $ Error e

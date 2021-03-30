@@ -6,7 +6,7 @@ import Criterion.Main
 
 import BooleanAlgebra
 import BooleanAlgebra.Examples
-import BooleanAlgebra.Support.Minisat
+import BooleanAlgebra.Support.Minisat as MS
 import Gen
 
 {- Notes & interesting reads:
@@ -41,8 +41,8 @@ standardDemo = do
 
 formatMinisatResult :: forall a. (Show a, Ord a) => MinisatResult a -> String
 formatMinisatResult = \case
-    Sat map -> Map.foldrWithKey showsEntry id map ""
-    other   -> show other
+    MS.Sat map  -> Map.foldrWithKey showsEntry id map ""
+    other       -> show other
     where
         showsEntry :: a -> Bool -> ShowS -> ShowS
         showsEntry name value rest =
@@ -54,7 +54,7 @@ minisatDemo :: IO ()
 minisatDemo = do
     let cnf = toCNF2 (sortList :: BooleanExpr String)
     print $ cnfStats cnf
-    result <- runMinisat "minisat" cnf
+    result <- MS.runMinisat "minisat" cnf
     -- putStrLn $ show result
     putStrLn $ formatMinisatResult result
 

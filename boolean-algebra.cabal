@@ -33,6 +33,7 @@ library
       BooleanAlgebra.Examples
       BooleanAlgebra.Format.Dimacs
       BooleanAlgebra.Ideas
+      BooleanAlgebra.Solver.Basic
       BooleanAlgebra.Support.Arbitrary
       BooleanAlgebra.Support.Eval
       BooleanAlgebra.Support.Minisat
@@ -67,6 +68,10 @@ library
     , deriving-compat
     , hashable
     , mtl
+    , optics
+    , optics-core
+    , optics-extra
+    , optics-th
     , process
     , recursion-schemes
     , sky-utils
@@ -96,6 +101,10 @@ executable boolean-algebra-exe
     , deriving-compat
     , hashable
     , mtl
+    , optics
+    , optics-core
+    , optics-extra
+    , optics-th
     , process
     , recursion-schemes
     , sky-utils
@@ -129,6 +138,10 @@ test-suite boolean-algebra-test
     , hashable
     , hspec
     , mtl
+    , optics
+    , optics-core
+    , optics-extra
+    , optics-th
     , process
     , quickcheck-instances
     , recursion-schemes
