@@ -32,6 +32,7 @@ import Optics.Internal.Optic
 import BooleanAlgebra.Base.Class
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Transform.Variable
+import BooleanAlgebra.Solver.Result
 
 import GHC.Stack (HasCallStack)
 import Debug.Trace
@@ -64,11 +65,6 @@ chooseOf = choices . fmap pure
 
 {-----------------------------------------------------------------------------}
 -- Solver state & monad
-
-data SATResult name
-    =   Unsat
-    |   Sat (Map name Bool)
-    deriving (Show, Eq, Ord)
 
 data SATState = SATState
     {   clauses :: [ Disjunction (Literal Int) ]
@@ -150,14 +146,13 @@ solverLoop (x:xs)   = do
     checkClauses
     solverLoop xs
 
-runSolver :: Int -> CNF Int -> SATResult Int
+runSolver :: Int -> CNF Int -> SatResult Int
 runSolver maxVar (CNF (Conjunction xs)) = evalNonDetM Unsat $ do
     (_, state) <- runStateT (solverLoop [1..maxVar]) (initState xs)
     return $ Sat (assignments state)
 
-solve :: HasCallStack => Ord name => CNF name -> SATResult name
+solve :: (HasCallStack, Ord name, MonadError (SatError name) m) =>
+    CNF name -> m (SatResult name)
 solve cnf = let
     Context (iton, ntoi) cnfi = buildContext cnf
-    in case runSolver (maxVarNum iton) cnfi of
-        Sat map -> Sat $ fmap (map Map.!) ntoi
-        Unsat   -> Unsat
+    in mapResultNames ntoi $ runSolver (maxVarNum iton) cnfi

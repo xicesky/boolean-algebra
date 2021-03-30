@@ -14,8 +14,7 @@ module BooleanAlgebra.Format.Dimacs
     ,   toDimacsVars
 
     ,   -- * Parsing results
-        MinisatResult(..)
-    ,   parseMinisatOutput
+        parseMinisatOutput
     ) where
 
 import Data.Bool (bool)
@@ -32,6 +31,7 @@ import Data.Attoparsec.ByteString.Char8
 import Missing.Textual
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Transform.Variable
+import BooleanAlgebra.Solver.Result
 
 -- import Debug.Trace (trace)
 
@@ -87,27 +87,22 @@ parseLiteralList :: Parser (Map Int Bool)
 parseLiteralList = skipSpace >>
     Map.fromList <$> manyTill parseLiteral (char '0')
 
-data MinisatResult name
-    =   Error String
-    |   Unsat
-    |   Sat (Map name Bool)
-    deriving (Show, Eq)
-
-parseMinisatOutput' :: Parser (MinisatResult Int)
+parseMinisatOutput' :: Parser (SatResult Int)
 parseMinisatOutput' = skipSpace >> (
                 (string "UNSAT" >> return Unsat)
     <|> Sat <$> (string "SAT"   >> parseLiteralList)
     )
 
 -- | Parse output in the simple minisat format
-parseMinisatOutput :: B.ByteString -> MinisatResult Int
+parseMinisatOutput :: MonadError (SatError a) m => B.ByteString -> m (SatResult Int)
 parseMinisatOutput text = -- trace ("parseMinisatOutput " ++ show text) $
     case parseOnly parseMinisatOutput' text of
-        Left err    -> Error err
-        Right r     -> r
+        Left err    -> throwError $ ExternalSolverError err
+        Right r     -> return r
 
 {- TODO:
     Parse DIMACS problem file
+    Parse actual DIMACS output (e.g. from glucose-simp)
     Output DIMACS solution file
     QDIMACS: http://www.qbflib.org/qdimacs.html
 

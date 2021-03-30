@@ -9,8 +9,6 @@ module BooleanAlgebra.Support.Minisat
     (   -- * Running minisat
         runMinisat
     ,   runMinisat'
-    ,   -- * Re-exports
-        MinisatResult(..)
     ) where
 
 import System.IO (withFile, IOMode(..))
@@ -20,20 +18,25 @@ import qualified Data.Map.Strict as Map
 import qualified Data.ByteString as B
 import Data.ByteString.Builder (Builder)
 
+import Control.Monad.IO.Class
+
 import Missing.IO as MIO
 import Missing.Textual
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Transform.Variable
 import BooleanAlgebra.Format.Dimacs
+import BooleanAlgebra.Solver.Result
 
-invokeMinisat :: FilePath -> Builder -> IO (Either String B.ByteString)
-invokeMinisat minisatFP input = withSystemTempDirectory "ba" $ \tempdir -> let
+-- | Run the minisat executable, providing IO via temp files
+invokeMinisat :: MonadIO m => FilePath -> Builder -> m (Either String B.ByteString)
+invokeMinisat minisatFP input = liftIO $ withSystemTempDirectory "ba" $ \tempdir -> let
     inputFP = tempdir ++ "/input.cnf"
     outputFP = tempdir ++ "/output.minisat"
     in do
         MIO.writeFile inputFP input
         -- putStrLn $ textualToString input
         putStrLn "Invoking Minisat..." -- TODO remove
+        -- TODO: Make minisat less verbose
         (exitCode, stdOut, stdErr) <- readProcessWithExitCodeInt
             minisatFP [ inputFP, outputFP ] ""
         putStr stdOut
@@ -43,18 +46,17 @@ invokeMinisat minisatFP input = withSystemTempDirectory "ba" $ \tempdir -> let
                 -> MIO.readFile outputFP
             code -> return $ Left $ "minisat ExitCode " ++ show code ++ ": " ++ stdErr
 
--- | Run minisat (or compatible solver) on a CNF problem
-runMinisat' :: FilePath -> CNF Int -> IO (MinisatResult Int)
+-- | Run minisat on a CNF problem
+runMinisat' :: (MonadError (SatError a) m, MonadIO m) =>
+    FilePath -> CNF Int -> m (SatResult Int)
 runMinisat' minisat cnf =
     invokeMinisat minisat (unASCIIBuilder $ toDimacs cnf) >>= \case
-        Left err -> return $ Error err
-        Right output -> return $ parseMinisatOutput output
+        Left err        -> throwError $ ExternalSolverError err
+        Right output    -> parseMinisatOutput output
 
--- | Run minisat (or compatible solver) on a CNF problem, preserving variable names
-runMinisat :: Ord name => FilePath -> CNF name -> IO (MinisatResult name)
+-- | Run minisat on a CNF problem, preserving variable names
+runMinisat :: (MonadError (SatError name) m, MonadIO m, Ord name) =>
+    FilePath -> CNF name -> m (SatResult name)
 runMinisat minisat cnf = let
     Context (_, ntoi) cnfi = buildContext cnf
-    in runMinisat' minisat cnfi >>= \case
-        Sat map -> return $ Sat $ fmap (map Map.!) ntoi
-        Unsat   -> return Unsat
-        Error e -> return $ Error e
+    in runMinisat' minisat cnfi >>= mapResultNames ntoi

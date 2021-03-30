@@ -8,13 +8,15 @@ module Interactive where
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
+import Control.Monad.IO.Class
+
 import Test.QuickCheck
 import Test.QuickCheck.Arbitrary
 
 import BooleanAlgebra
 import BooleanAlgebra.Examples
 import BooleanAlgebra.Format.Dimacs (toDimacs, toDimacsVars, parseMinisatOutput)
-import qualified BooleanAlgebra.Support.Minisat as MS
+import BooleanAlgebra.Support.Minisat
 import Gen
 
 import Debug.Trace
@@ -31,13 +33,8 @@ import Debug.Trace
 checkArbitrary :: forall a. (Arbitrary a, Show a, Eq a) => IO ()
 checkArbitrary = quickCheck (\(x::a) -> x == x)
 
--- FIXME: Eliminate MinisatResult
--- FIXME: Sat vs SAT
-toSatResult :: MS.MinisatResult name -> IO (SATResult name)
-toSatResult = \case
-    MS.Error e      -> fail e
-    MS.Unsat        -> return Unsat
-    MS.Sat r        -> return $ Sat r
+{-----------------------------------------------------------------------------}
+-- Testing solvers against each other
 
 cmpMap :: forall name. (Show name, Ord name) => Map name Bool -> Map name Bool -> IO ()
 cmpMap ma mb = let
@@ -52,7 +49,7 @@ cmpMap ma mb = let
         putStrLn "Right, but not right"
         Map.foldMapWithKey showEntry right
 
-cmpSatResult :: (Show name, Ord name) => SATResult name -> SATResult name -> IO ()
+cmpSatResult :: (Show name, Ord name) => SatResult name -> SatResult name -> IO ()
 cmpSatResult (Sat a) (Sat b)
     | a == b                = putStrLn "Ok: Both Sat"
     | otherwise             = putStrLn "Error: Different solutions" >> cmpMap a b
@@ -60,19 +57,25 @@ cmpSatResult Unsat Unsat    = putStrLn "Ok: Both Unsat"
 cmpSatResult (Sat _) Unsat  = putStrLn "Error: Right Unsat"
 cmpSatResult Unsat (Sat _)  = putStrLn "Error: Right Sat"
 
+printError :: SatError String -> IO ()
+printError err = do
+    putStrLn $ "Sorry, there was an error: " ++ show err
+
 -- Check a solver against minisat
-checkSolver :: (CNF String -> SATResult String) -> IO ()
+checkSolver :: (CNF String -> SatT String IO (SatResult String)) -> IO ()
 checkSolver solver = do
     -- Better use a problem with at most one solution!
     let cnf = toCNF (sortList :: BooleanExpr String)
     print $ cnfStats cnf
 
-    result <- MS.runMinisat "minisat" cnf >>= toSatResult
-    let result2 = solver cnf
+    runSatT printError $ do
+        result <- runMinisat "minisat" cnf
+        result2 <- solver cnf
 
-    putStrLn ""
-    putStrLn $ replicate 80 '-'
-    putStrLn ""
-    cmpSatResult result result2
+        liftIO $ do 
+            putStrLn ""
+            putStrLn $ replicate 80 '-'
+            putStrLn ""
+            cmpSatResult result result2
 
-    return ()
+        return ()

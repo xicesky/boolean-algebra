@@ -26,19 +26,21 @@ import System.Process (readProcessWithExitCode)
 import qualified Data.ByteString as B
 import Data.ByteString.Builder (Builder, hPutBuilder)
 
+import Control.Monad.IO.Class
+
 {- FIXME: Instead of introducing another incompatibility,
     make a class of "stuff that can be read and written from files".
     And use Missing.Textual.
 -}
 
 -- | Write a ByteString 'Builder' to a file
-writeFile :: FilePath -> Builder -> IO ()
-writeFile fp content = withFile fp WriteMode $
+writeFile :: MonadIO m => FilePath -> Builder -> m ()
+writeFile fp content = liftIO $ withFile fp WriteMode $
     \fh -> hPutBuilder fh content
 
 -- | Read a ByteString from a file
-readFile :: FilePath -> IO (Either String B.ByteString)
-readFile fp = handle errHandler (Right <$> B.readFile fp) where
+readFile :: MonadIO m => FilePath -> m (Either String B.ByteString)
+readFile fp = liftIO $ handle errHandler (Right <$> B.readFile fp) where
     errHandler :: IOException -> IO (Either String a)
     errHandler e = return $ Left $ show e
 
@@ -49,7 +51,8 @@ exitCodeToInt = \case
     ExitFailure x -> x
 
 -- | 'readProcessWithExitCode' without the weird 'ExitCode'
-readProcessWithExitCodeInt :: FilePath -> [String] -> String -> IO (Int, String, String)
+readProcessWithExitCodeInt :: MonadIO m =>
+    FilePath -> [String] -> String -> m (Int, String, String)
 readProcessWithExitCodeInt file args stdin = do
-    (exitcode, stdOut, stdErr) <- readProcessWithExitCode file args stdin
+    (exitcode, stdOut, stdErr) <- liftIO $ readProcessWithExitCode file args stdin
     return (exitCodeToInt exitcode, stdOut, stdErr)

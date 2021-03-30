@@ -8,6 +8,7 @@ module BooleanAlgebra
     ,   module BooleanAlgebra.Transform.Simplify
     ,   module BooleanAlgebra.Transform.CNF
     ,   module BooleanAlgebra.Transform.Variable
+    ,   module BooleanAlgebra.Solver.Result
     ,   module BooleanAlgebra.Solver.Basic
     ,   module BooleanAlgebra.Support.Arbitrary
     ) where
@@ -27,6 +28,9 @@ import BooleanAlgebra.Base.Pretty
 import BooleanAlgebra.Transform.Simplify
 import BooleanAlgebra.Transform.CNF
 import BooleanAlgebra.Transform.Variable
+
+-- TODO: Solver is probably an extra
+import BooleanAlgebra.Solver.Result
 import BooleanAlgebra.Solver.Basic
 
 -- FIXME: Those should probably be "extras" and not in the main lib
