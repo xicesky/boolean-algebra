@@ -31,7 +31,7 @@ import Data.Attoparsec.ByteString.Char8
 import Missing.Textual
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Transform.Variable
-import BooleanAlgebra.Solver.Result
+import BooleanAlgebra.Solver.Class
 
 -- import Debug.Trace (trace)
 

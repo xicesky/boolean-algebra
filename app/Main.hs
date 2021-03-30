@@ -55,8 +55,9 @@ minisatDemo :: IO ()
 minisatDemo = do
     let cnf = toCNF2 (sortList :: BooleanExpr String)
     print $ cnfStats cnf
+    let (meh :: Minisat) = Minisat "minisat"
     runSatT print $ do
-        result <- runMinisat "minisat" cnf
+        result <- solve meh cnf
     
         -- putStrLn $ show result
         liftIO $ putStrLn $ formatMinisatResult result

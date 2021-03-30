@@ -32,7 +32,7 @@ import Optics.Internal.Optic
 import BooleanAlgebra.Base.Class
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Transform.Variable
-import BooleanAlgebra.Solver.Result
+import BooleanAlgebra.Solver.Class
 
 import GHC.Stack (HasCallStack)
 import Debug.Trace
@@ -119,10 +119,7 @@ instance EvalAlg Conjunction Bool where
     eval (Conjunction xs) = getAll $ foldMap All xs
 
 {-----------------------------------------------------------------------------}
-
--- FIXME: This should be made easier by using Context, not harder
-maxVarNum :: Map Int name -> Int
-maxVarNum map = maximum $ 0 : Map.keys map
+-- Actual solver
 
 assignVar :: Int -> Bool -> SolverM ()
 assignVar i val = modifying #assignments $ Map.insert i val
@@ -146,13 +143,13 @@ solverLoop (x:xs)   = do
     checkClauses
     solverLoop xs
 
-runSolver :: Int -> CNF Int -> SatResult Int
-runSolver maxVar (CNF (Conjunction xs)) = evalNonDetM Unsat $ do
-    (_, state) <- runStateT (solverLoop [1..maxVar]) (initState xs)
-    return $ Sat (assignments state)
+{-----------------------------------------------------------------------------}
+-- Interface
 
-solve :: (HasCallStack, Ord name, MonadError (SatError name) m) =>
-    CNF name -> m (SatResult name)
-solve cnf = let
-    Context (iton, ntoi) cnfi = buildContext cnf
-    in mapResultNames ntoi $ runSolver (maxVarNum iton) cnfi
+data BasicSolver = BasicSolver
+
+instance Monad m => Solver BasicSolver m where
+    solveInt :: BasicSolver -> Int -> CNF Int -> SatT a m (SatResult Int)
+    solveInt _ maxVar (CNF (Conjunction xs)) = return $ evalNonDetM Unsat $ do
+        (_, state) <- runStateT (solverLoop [1..maxVar]) (initState xs)
+        return $ Sat (assignments state)

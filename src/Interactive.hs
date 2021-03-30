@@ -62,15 +62,15 @@ printError err = do
     putStrLn $ "Sorry, there was an error: " ++ show err
 
 -- Check a solver against minisat
-checkSolver :: (CNF String -> SatT String IO (SatResult String)) -> IO ()
+checkSolver :: Solver s IO => s -> IO ()
 checkSolver solver = do
     -- Better use a problem with at most one solution!
     let cnf = toCNF (sortList :: BooleanExpr String)
     print $ cnfStats cnf
 
     runSatT printError $ do
-        result <- runMinisat "minisat" cnf
-        result2 <- solver cnf
+        result <- solve (Minisat "minisat") cnf
+        result2 <- solve solver cnf
 
         liftIO $ do 
             putStrLn ""

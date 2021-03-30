@@ -1,13 +1,18 @@
 
 {- |
-Description     : Solver result datatype
+Description     : Solver interface
 Stability       : experimental
+
+Defines a common interface for internal and external sat solvers
 -}
-module BooleanAlgebra.Solver.Result 
+module BooleanAlgebra.Solver.Class
     (   -- * Sat solver result
         SatResult(..)
     ,   SatError(..)
-    ,   SatT
+    ,   Solver(..)
+
+    ,   -- * Utilities
+        SatT
     ,   mapResultNames
 
     ,   -- * Re-exports
@@ -25,6 +30,10 @@ import qualified Data.Map.Strict as Map
 -- mtl / transformers
 import Control.Monad.Error.Class
 import Control.Monad.Except
+
+import BooleanAlgebra.Base.Class
+import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Transform.Variable
 
 {-----------------------------------------------------------------------------}
 
@@ -46,21 +55,39 @@ data SatError name
     -- ^ Thrown when a model is missing a variable
     deriving (Show, Eq, Ord)
 
--- | Shortcut monad for SatError exceptions
-type SatT name = ExceptT (SatError name)
+{-----------------------------------------------------------------------------}
 
--- -- FIXME: To variable module
--- lookupVariable :: (Ord name, MonadError (SatError name) m) =>
---     Map name v -> name -> m v
--- lookupVariable map name =
---     maybe (throwError $ MissingVariable name)
---     return (Map.lookup name map)
+-- | Monad transformer for running sat solvers
+type SatT name = ExceptT (SatError name)
 
 runSatT :: Monad m =>
     (SatError name -> m a) -> SatT name m a -> m a
 runSatT handleError inner = runExceptT inner >>= \case
     Left err    -> handleError err
     Right r     -> return r
+
+{-----------------------------------------------------------------------------}
+
+{- | General class for sat solvers
+
+The monad @m@ parameter is used for external solvers that require, for example,
+a 'MonadIO' constraint.
+-}
+class Monad m => Solver s m where
+    solveInt ::
+        s -> Int -> CNF Int -> SatT a m (SatResult Int)
+
+    solve :: Ord name =>
+        s -> CNF name -> SatT name m (SatResult name)
+    solve s cnf = let
+        Context (iton, ntoi) cnfi = buildContext cnf
+        in do
+            result <- solveInt s (maxVarNum iton) cnfi
+            mapResultNames ntoi result
+
+-- FIXME: This should be made easier by using Context, not harder
+maxVarNum :: Map Int name -> Int
+maxVarNum map = maximum $ 0 : Map.keys map
 
 {- | Map the model given by a sat solver back to named variables.
 

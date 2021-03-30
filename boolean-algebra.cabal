@@ -34,7 +34,7 @@ library
       BooleanAlgebra.Format.Dimacs
       BooleanAlgebra.Ideas
       BooleanAlgebra.Solver.Basic
-      BooleanAlgebra.Solver.Result
+      BooleanAlgebra.Solver.Class
       BooleanAlgebra.Support.Arbitrary
       BooleanAlgebra.Support.Eval
       BooleanAlgebra.Support.Minisat
