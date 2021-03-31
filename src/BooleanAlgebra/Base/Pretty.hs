@@ -1,4 +1,6 @@
 
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 {- |
 Description     : Pretty-printer
 Stability       : experimental
@@ -9,19 +11,79 @@ module BooleanAlgebra.Base.Pretty
     (   -- * Temporary replacements
         prettyBool, printBool
 
+    ,   -- * Re-exports
+        pretty
+    ,   IsString(..)
+    ,   (<+>)
+    ,   nest, hang, align
+    ,   vsep
+
     ) where
+
+import Data.String (IsString(..))
+import Prettyprinter
+import Term.Term
+import Term.Prettyprinter
+import BooleanAlgebra.Base.Expression
 
 {-----------------------------------------------------------------------------}
 -- TODO !!
 
-prettyBool :: Show a => a -> String
-prettyBool = show
+prettyBool :: Pretty a => a -> String
+prettyBool = show . pretty
 
-printBool :: Show a => a -> IO ()
+printBool :: Pretty a => a -> IO ()
 printBool = putStrLn . prettyBool
 
 {-----------------------------------------------------------------------------}
--- {-----------------------------------------------------------------------------}
+-- Instances for term types
+
+--pp :: (PrettyTerm1 a, PrettyTerm b, PrettyTerm c) => Fix4 TermF a b c -> Doc ann
+-- pp :: (PrettyTerm1 a, PrettyTerm b, Pretty c) =>
+--     PrettyOptions -> Precedence ->
+--     Fix4 TermF a b (Literal c) -> Doc ann
+-- pp = prettyTerm
+
+instance (PrettyTerm1 op, PrettyTerm val, Show var)
+    => PrettyTerm (TermLit op val var) where
+    prettyTerm opts d (TermLit t) = fromString "TermLit" <+> prettyTerm opts d t
+
+instance (PrettyTerm1 op, PrettyTerm val, Show var)
+    => Pretty (TermLit op val var) where
+    pretty = defaultPretty
+
+instance PrettyTerm e => PrettyTerm (Conjunction e) where
+    prettyTerm opts d (Conjunction xs) = group $
+        fromString "Conjunction"
+        <+> aList (prettyTerm opts 0) xs
+
+instance PrettyTerm e => Pretty (Conjunction e) where
+    pretty = defaultPretty
+
+instance PrettyTerm e => PrettyTerm (Disjunction e) where
+    prettyTerm opts d (Disjunction xs) = group $
+        fromString "Disjunction"
+        <+> aList (prettyTerm opts 0) xs
+
+instance PrettyTerm e => Pretty (Disjunction e) where
+    pretty = defaultPretty
+
+instance Show name => PrettyTerm (CNF name) where
+    prettyTerm opts d (CNF cd) =
+        fromString "CNF"
+        <+> prettyTerm opts d cd
+
+instance Show name => Pretty (CNF name) where
+    pretty = defaultPretty
+
+{-----------------------------------------------------------------------------}
+-- Instances for base types
+
+instance PrettyTerm Bool
+instance Show a => PrettyTerm (Literal a)
+
+
+{-----------------------------------------------------------------------------}
 
 -- import Data.Bool (bool)
 -- import Data.List (intersperse)
@@ -37,7 +99,6 @@ printBool = putStrLn . prettyBool
 
 -- import BooleanAlgebra.Util.THUtil
 -- import BooleanAlgebra.Util.Util
--- import BooleanAlgebra.Base.Expression
 
 -- {-----------------------------------------------------------------------------}
 -- -- "Pretty" printer

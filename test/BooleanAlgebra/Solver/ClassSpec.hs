@@ -123,4 +123,3 @@ spec :: Spec
 spec = do
     spec_BasicSolver
     spec_Minisat
-    -- it "is WIP" $ pending

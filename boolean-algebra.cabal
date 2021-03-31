@@ -48,6 +48,7 @@ library
       Missing.Textual
       Missing.Void
       Term.Inject
+      Term.Prettyprinter
       Term.Substitution
       Term.Term
       Term.Variable.Context
@@ -57,7 +58,7 @@ library
       Paths_boolean_algebra
   hs-source-dirs:
       src
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor DeriveFoldable DeriveTraversable EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor DeriveFoldable DeriveTraversable EmptyCase EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
   build-depends:
       QuickCheck
     , attoparsec
@@ -73,6 +74,9 @@ library
     , optics-core
     , optics-extra
     , optics-th
+    , pretty-simple
+    , prettyprinter
+    , prettyprinter-ansi-terminal
     , process
     , recursion-schemes
     , sky-utils
@@ -88,7 +92,7 @@ executable boolean-algebra-exe
       Paths_boolean_algebra
   hs-source-dirs:
       app
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor DeriveFoldable DeriveTraversable EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor DeriveFoldable DeriveTraversable EmptyCase EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
@@ -106,6 +110,9 @@ executable boolean-algebra-exe
     , optics-core
     , optics-extra
     , optics-th
+    , pretty-simple
+    , prettyprinter
+    , prettyprinter-ansi-terminal
     , process
     , recursion-schemes
     , sky-utils
@@ -125,7 +132,7 @@ test-suite boolean-algebra-test
       Paths_boolean_algebra
   hs-source-dirs:
       test
-  default-extensions: ConstraintKinds DataKinds DeriveFunctor DeriveFoldable DeriveTraversable EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
+  default-extensions: ConstraintKinds DataKinds DeriveFunctor DeriveFoldable DeriveTraversable EmptyCase EmptyDataDecls FlexibleContexts FlexibleInstances GADTs InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses NoStarIsType PolyKinds RankNTypes ScopedTypeVariables StandaloneDeriving StandaloneKindSignatures TemplateHaskell TypeApplications TypeFamilies TypeOperators
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       QuickCheck
@@ -144,6 +151,9 @@ test-suite boolean-algebra-test
     , optics-core
     , optics-extra
     , optics-th
+    , pretty-simple
+    , prettyprinter
+    , prettyprinter-ansi-terminal
     , process
     , quickcheck-instances
     , recursion-schemes

@@ -126,6 +126,9 @@ flatten = flatten' . inject
 Currently only does constant folding, literals and flattening - i.e.
 the minimum work to transform into CNF.
 
+Note: if you get errors about ambiguous types, try to fix the /input/ type, e.g.:
+
+>>> simplify (problem :: BooleanExpr String)
 -}
 simplify :: (t a :<: Term BOps Bool a) => t a -> TermLit BFlOps Void a
 simplify term = case constantFold term of

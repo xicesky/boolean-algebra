@@ -39,6 +39,9 @@ dependencies:
 - attoparsec
 - temporary
 - process
+- prettyprinter
+- prettyprinter-ansi-terminal
+- pretty-simple
 - criterion
 - QuickCheck
 
@@ -48,6 +51,7 @@ default-extensions:
 - DeriveFunctor
 - DeriveFoldable
 - DeriveTraversable
+- EmptyCase
 - EmptyDataDecls
 - FlexibleContexts
 - FlexibleInstances

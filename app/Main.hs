@@ -1,14 +1,19 @@
 
 module Main where
 
+import Data.Void (Void)
 import qualified Data.Map.Strict as Map
 import Control.Monad.IO.Class
 import Criterion.Main
+import Text.Pretty.Simple (pPrint)
 
 import BooleanAlgebra
 import BooleanAlgebra.Examples
 import BooleanAlgebra.Support.Minisat
 import Gen
+
+-- For showing internal pretty-printer state
+import Term.Prettyprinter
 
 {- Notes & interesting reads:
     https://en.wikipedia.org/wiki/Satisfiability_modulo_theories
@@ -23,11 +28,11 @@ Inspiration for solver:
 
 demo :: BooleanExpr String -> IO ()
 demo ex = do
-    putStr "Original    : "; printBool ex
-    putStr "Simplified  : "; printBool $ simplify ex
+    print $ fromString "Original    :" <+> align (pretty ex)
+    print $ fromString "Simplified  :" <+> align (pretty $ simplify ex)
     -- The intermediate form doesn't really show anything fancy
     --putStr "Intermediate: "; printBool $ aggregateConjDisj' $ simplify ex
-    putStr "CNF         : "; printBool $ toCNF ex
+    print $ fromString "CNF         :" <+> align (pretty $ toCNF ex)
 
 standardDemo :: IO ()
 standardDemo = do
@@ -63,17 +68,29 @@ minisatDemo = do
         liftIO $ putStrLn $ formatMinisatResult result
 
 bugDemo :: IO ()
-bugDemo =  do
+bugDemo = do
     let problem :: BooleanExpr String = pidgeonHole' 1
     let cnf :: CNF String = toCNF problem
     result <- solve' (Minisat "minisat") cnf
     print result
 
+prettyPrintDemo :: IO ()
+prettyPrintDemo = do
+    let problem :: BooleanExpr String = pidgeonHole' 3
+    --let obj = problem
+    --let obj = simplify problem
+    let obj = toCNF problem
+    putStr "pretty-s.   : "; pPrint obj
+    print $ fromString "PP output   :" <+> pretty obj
+    -- Demo of debugging the pretty-printer
+    --putStr "PP repr     : "; pPrint (diag' $ pretty obj :: Diag ())
+
 main :: IO ()
 main =
-    -- standardDemo
-    minisatDemo
+    standardDemo
+    -- minisatDemo
     -- bugDemo
+    -- prettyPrintDemo
 
 -- TODO: Use criterion for benchmarks.
 

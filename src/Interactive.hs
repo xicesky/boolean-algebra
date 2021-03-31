@@ -79,3 +79,8 @@ checkSolver solver = do
             cmpSatResult result result2
 
         return ()
+
+{- Example usage of pretty-printer
+
+>>> pretty $ toCNF (pidgeonHole' 3 :: BooleanExpr String)
+-}
