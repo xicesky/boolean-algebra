@@ -33,12 +33,8 @@ invokeMinisat minisatFP input = liftIO $ withSystemTempDirectory "ba" $ \tempdir
     outputFP = tempdir ++ "/output.minisat"
     in do
         MIO.writeFile inputFP input
-        -- putStrLn $ textualToString input
-        putStrLn "Invoking Minisat..." -- TODO remove
-        -- TODO: Make minisat less verbose
         (exitCode, stdOut, stdErr) <- readProcessWithExitCodeInt
             minisatFP [ inputFP, outputFP ] ""
-        putStr stdOut
         case exitCode of
             -- Minisat uses weird exit codes
             n | n == 10 || n == 20

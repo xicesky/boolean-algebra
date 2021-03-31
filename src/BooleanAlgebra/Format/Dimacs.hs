@@ -59,7 +59,7 @@ toDimacs cnf@(CNF (Conjunction xs))
     = problemLine <> clauses where
     numVars = maximum (variableNames cnf)
     numClauses = length xs
-    problemLine = foldText' [ tString "p", tString "cnf", tIntDec numVars, tIntDec numClauses ]
+    problemLine = foldText' [ tString "p", tString "cnf", tIntDec numVars, tIntDec numClauses ] <> tNewline
     clauses = foldText (dimacsClause . unDisjunction) mempty xs
 
 {- | Turn a CNF into its DIMACS represention

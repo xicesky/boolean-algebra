@@ -21,6 +21,7 @@ module Missing.Textual
 
 import Prelude hiding (concat)
 import qualified Prelude as P
+import Data.Maybe (fromMaybe)
 import Data.Foldable as F
 
 import Control.Monad.Writer
@@ -32,8 +33,15 @@ import Data.ByteString.Builder
 
 {-----------------------------------------------------------------------------}
 
+cText :: Textual t => t -> Maybe t -> t -> t
+cText spacer l r = case l of
+    Nothing     -> r
+    Just text   -> text <> spacer <> r
+
 foldText :: (Textual t, Foldable f) => (a -> t) -> t -> f a -> t
-foldText totext space = F.foldl' (\rest e -> rest <> space <> totext e) mempty
+foldText totext space = fromMaybe mempty . F.foldl' f Nothing
+    where
+        f accum = Just . cText space accum . totext
 
 foldText' :: (Textual t, Foldable f) => f t -> t
 foldText' = foldText id (tChar ' ')
