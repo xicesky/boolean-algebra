@@ -34,7 +34,6 @@ import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Transform.Variable
 import BooleanAlgebra.Solver.Class
 
-import GHC.Stack (HasCallStack)
 import Debug.Trace
 
 {-----------------------------------------------------------------------------}
@@ -135,12 +134,12 @@ checkClauses = use #assignments >>= \asgn -> let
     in use #clauses >>= traverse_ check
 
 solverLoop :: [Int] -> SolverM ()
-solverLoop []       = return ()
+solverLoop []       = checkClauses      -- always check if acutally SAT
 solverLoop (x:xs)   = do
     -- traceM $ "SolverLoop " ++ show (x:xs)
+    checkClauses
     phase <- chooseOf [True, False]
     assignVar x phase
-    checkClauses
     solverLoop xs
 
 {-----------------------------------------------------------------------------}

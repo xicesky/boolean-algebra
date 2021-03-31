@@ -56,11 +56,11 @@ regression02Check cnf =
 {-----------------------------------------------------------------------------}
 -- Quickcheck properties
 
-prop_CNF_preservesSolutions :: HasCallStack => BooleanExpr String -> Property
+prop_CNF_preservesSolutions :: BooleanExpr String -> Property
 prop_CNF_preservesSolutions t = propEqual t (toCNF t)
 
 -- TODO: This test really requires a SAT solver to be reliable
-prop_CNF2_preservesSolutions :: HasCallStack => BooleanExpr String -> Property
+prop_CNF2_preservesSolutions :: BooleanExpr String -> Property
 prop_CNF2_preservesSolutions t = propImplies (toCNF2 t) t
 
 {-----------------------------------------------------------------------------}

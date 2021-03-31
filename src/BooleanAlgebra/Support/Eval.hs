@@ -43,14 +43,13 @@ import BooleanAlgebra.Transform.Simplify
 import BooleanAlgebra.Transform.Variable
 import BooleanAlgebra.Support.Arbitrary
 
-import GHC.Stack (HasCallStack)
 import Debug.Trace
 
 {-----------------------------------------------------------------------------}
 -- Evaluation
 
 class Eval f name where
-    eval :: HasCallStack => (name -> Bool) -> f name -> Bool
+    eval :: (name -> Bool) -> f name -> Bool
 
 instance Ord name => Eval (Term BOps Bool) name where
     eval lookup term = let     -- constantFold already does it, and we can prove it :)
@@ -87,7 +86,7 @@ instance Ord name => Eval CNF name where
 
 -- | True if @t1@ and @t2@ evaluate to the same value
 -- for a given assignment function @lookup@.
-equalEval :: (HasCallStack, Show (f name), Show (g name)
+equalEval :: (Show (f name), Show (g name)
     , Eval f name, Eval g name)
     => (name -> Bool) -> f name -> g name -> Bool
 equalEval lookup t1 t2 = let
@@ -100,8 +99,8 @@ equalEval lookup t1 t2 = let
 
 -- | Equality of two terms of possibly different types
 -- under arbitrary variable mappings
-propEqual :: forall name f g. (HasCallStack
-    , Show name, Ord name
+propEqual :: forall name f g.
+    ( Show name, Ord name
     , Show (f name), Show (g name)
     , HasNames (f name), HasNames (g name)
     , NameT (f name) ~ name, NameT (g name) ~ name
@@ -130,8 +129,8 @@ _Warning_: This property tries to generate mappings that satisfy @t1@,
 but it cannot quickly find them. So this will be slow for hardly satisfiable
 terms @t1@.
 -}
-propImplies :: forall name f g. (HasCallStack
-    , Show name, Ord name
+propImplies :: forall name f g.
+    ( Show name, Ord name
     , Show (f name), Show (g name)
     , HasNames (f name), HasNames (g name)
     , NameT (f name) ~ name, NameT (g name) ~ name

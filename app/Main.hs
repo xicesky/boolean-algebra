@@ -62,10 +62,18 @@ minisatDemo = do
         -- putStrLn $ show result
         liftIO $ putStrLn $ formatMinisatResult result
 
+bugDemo :: IO ()
+bugDemo =  do
+    let problem :: BooleanExpr String = pidgeonHole' 1
+    let cnf :: CNF String = toCNF problem
+    result <- solve' (Minisat "minisat") cnf
+    print result
+
 main :: IO ()
 main =
     -- standardDemo
     minisatDemo
+    -- bugDemo
 
 -- TODO: Use criterion for benchmarks.
 

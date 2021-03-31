@@ -47,7 +47,6 @@ import BooleanAlgebra.Transform.Variable
 -- import BooleanAlgebra.Transform.Simplify
 -- import BooleanAlgebra.Transform.CNF
 
-import GHC.Stack (HasCallStack)
 -- import Debug.Trace
 
 {- | Choose between two alternatives, with
@@ -93,8 +92,8 @@ tryGenerateMapping tries test vars = resize tries $
 -- TODO generalize and put into our Term library
 
 -- | Generate a boolean term of a maximum @size@ from atoms @vasr@ and @vals@
-generateTerm :: forall var val. HasCallStack
-    => Int -> [var] -> [val] -> Gen (Term BOps val var)
+generateTerm :: forall var val.
+    Int -> [var] -> [val] -> Gen (Term BOps val var)
 generateTerm size vars vals = term size where
     atom :: Gen (Term BOps val var)
     atom    | null vals = Var <$> elements vars

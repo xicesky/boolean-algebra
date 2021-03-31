@@ -8,6 +8,7 @@ _WIP_: This module is work in progress.
 module BooleanAlgebra.Transform.Variable
     (   -- * Collecting variable names
         HasNames(..)
+    ,   maximumVarNum
 
     ,   -- * Name maps
         MappedNames(..)
@@ -50,6 +51,17 @@ instance Ord name => HasNames (CNF name) where
     type NameT (CNF name) = name
     variableNames :: CNF name -> Set name
     variableNames = foldMap Set.singleton
+
+{- | Get the maximum variable number, or @0@ .
+
+Returns @0@ if the term has no variables. Useful for a @CNF Int@
+representation, where the number of variables has to be specified.
+-}
+maximumVarNum :: (HasNames t, Num (NameT t), Ord (NameT t)) =>
+    t -> NameT t
+maximumVarNum term = let
+    names = variableNames term
+    in if null names then 0 else maximum names
 
 {-----------------------------------------------------------------------------}
 -- Idea: compare terms for α-Equivalence

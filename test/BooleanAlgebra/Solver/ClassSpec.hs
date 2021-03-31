@@ -54,7 +54,7 @@ prop_solves_CNF s timeLimit expr = within timeLimit $ monadicIO $ let
         assert (r1 `eqSat` r2)
 
 prop_detects_unsat :: Solver s IO => s -> Int -> VerySmallNat -> Property
-prop_detects_unsat s timeLimit (VerySmallNat probSize) = (probSize > 1) ==>
+prop_detects_unsat s timeLimit (VerySmallNat probSize) = (probSize > 0) ==>
     withMaxSuccess 10 $ -- reduce amount of runs
     within timeLimit $ monadicIO $ do
         --traceM $ "prop_detects_unsat s " ++ show probSize
