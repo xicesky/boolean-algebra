@@ -11,6 +11,10 @@ import BooleanAlgebra.Support.Arbitrary
 
 import Debug.Trace
 
+{-# ANN module "HLint: ignore Redundant $" #-}
+
+{-----------------------------------------------------------------------------}
+
 -- prop_nameLiterals_inverts :: BooleanExprLit -> Bool
 -- prop_nameLiterals_inverts term = let
 --     nameMap :: NameMap
@@ -27,6 +31,9 @@ import Debug.Trace
 
 -- spec_nameLiterals = describe "nameLiterals" $ do
 --     prop "is the inverse of  'numberLiterals'" prop_nameLiterals_inverts
+
+{-----------------------------------------------------------------------------}
+-- HSpec
 
 spec :: Spec
 spec = do

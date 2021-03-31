@@ -17,6 +17,9 @@ import BooleanAlgebra.Examples
 import qualified BooleanAlgebra.Base.Logic as L
 import BooleanAlgebra.Support.Eval
 
+{-----------------------------------------------------------------------------}
+-- Specific regression tests
+
 regression01In :: TermLit BFlOps Void Int
 regression01In = TermLit $ BConj [ BDisj
     [   BConj [ Var (Lit c) | c <- [1..3] ]
@@ -50,12 +53,18 @@ regression02Check cnf =
     -- N1P1 occurs at most once in each clause
     maximum (regression02Info cnf) == 1
 
+{-----------------------------------------------------------------------------}
+-- Quickcheck properties
+
 prop_CNF_preservesSolutions :: HasCallStack => BooleanExpr String -> Property
 prop_CNF_preservesSolutions t = propEqual t (toCNF t)
 
 -- TODO: This test really requires a SAT solver to be reliable
 prop_CNF2_preservesSolutions :: HasCallStack => BooleanExpr String -> Property
 prop_CNF2_preservesSolutions t = propImplies (toCNF2 t) t
+
+{-----------------------------------------------------------------------------}
+-- HSpec
 
 spec_distributeToCNF = describe "distributeToCNF" $ do
     it "distributes correctly" $ distributeToCNF regression01In `shouldBe` regression01Ex

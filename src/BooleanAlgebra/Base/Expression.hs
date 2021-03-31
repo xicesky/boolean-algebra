@@ -28,7 +28,8 @@ module BooleanAlgebra.Base.Expression
         BooleanUOp(..), BooleanBOp(..), BooleanFlatOp(..)
 
     ,   -- * Pattern synonyms
-        pattern BNot, pattern BAnd, pattern BOr
+        pattern Var, pattern Val
+    ,   pattern BNot, pattern BAnd, pattern BOr
     ,   pattern BConj, pattern BDisj
     ,   pattern Lit
 

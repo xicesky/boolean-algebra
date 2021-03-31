@@ -137,7 +137,7 @@ checkClauses = use #assignments >>= \asgn -> let
 solverLoop :: [Int] -> SolverM ()
 solverLoop []       = return ()
 solverLoop (x:xs)   = do
-    traceM $ "SolverLoop " ++ show (x:xs)
+    -- traceM $ "SolverLoop " ++ show (x:xs)
     phase <- chooseOf [True, False]
     assignVar x phase
     checkClauses

@@ -119,6 +119,7 @@ test-suite boolean-algebra-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      BooleanAlgebra.Solver.ClassSpec
       BooleanAlgebra.Transform.CNFSpec
       BooleanAlgebra.Transform.VariableSpec
       Paths_boolean_algebra

@@ -8,11 +8,14 @@ Defines a common interface for internal and external sat solvers
 module BooleanAlgebra.Solver.Class
     (   -- * Sat solver result
         SatResult(..)
+    ,   eqSat
     ,   SatError(..)
     ,   Solver(..)
+    ,   solve'
 
     ,   -- * Utilities
-        SatT
+        ProperName
+    ,   SatT
     ,   mapResultNames
 
     ,   -- * Re-exports
@@ -22,6 +25,8 @@ module BooleanAlgebra.Solver.Class
 
 import Data.Maybe
 import Data.Foldable
+import Data.Typeable (Typeable)
+import Control.Exception
 
 -- containers
 import Data.Map.Strict (Map)
@@ -37,11 +42,25 @@ import BooleanAlgebra.Transform.Variable
 
 {-----------------------------------------------------------------------------}
 
+-- TODO should probably be in Base.Expression
+-- | Proper variable names for use in sat solving
+class (Show name, Ord name, Typeable name) => ProperName name where
+    {-# MINIMAL #-}
+
+instance ProperName String
+instance ProperName Int
+
 -- | Result of successfully running a sat solver.
 data SatResult name
     =   Unsat
     |   Sat (Map name Bool)
     deriving (Show, Eq, Ord)
+
+-- | Compare two 'SatResult's for solvability, ignoring the model
+eqSat :: SatResult name -> SatResult name -> Bool
+eqSat Unsat Unsat       = True
+eqSat (Sat _) (Sat _)   = True
+eqSat _ _               = False
 
 {- | Possible errors for sat operations
 
@@ -54,6 +73,8 @@ data SatError name
     |   MissingVariable name
     -- ^ Thrown when a model is missing a variable
     deriving (Show, Eq, Ord)
+
+instance (Show name, Typeable name) => Exception (SatError name)
 
 {-----------------------------------------------------------------------------}
 
@@ -101,3 +122,8 @@ mapResultNames ntoi (Sat m) = Sat <$> Map.traverseWithKey lup ntoi where
     lup name index =
         maybe (throwError $ MissingVariable name)
         return (Map.lookup index m)
+
+-- | Simplified 'solve' method for interactive use
+solve' :: Solver s IO => 
+    s -> CNF String -> IO (Either (SatError String) (SatResult String))
+solve' s cnf = runSatT (return . Left) $ Right <$> solve s cnf

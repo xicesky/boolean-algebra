@@ -298,3 +298,23 @@ pattern BFlOp o xs  = Fix4 (RecT (FlatOp o xs))
 
 {-# COMPLETE Var, Val, Rec #-}
 {-# COMPLETE Var, Val, BUOp, BBOp, BFlOp #-}
+
+{-----------------------------------------------------------------------------}
+-- Utilities
+
+{- FIXME: 
+Have to use the quickcheck class for recursion into values
+This means we need a full Arbitrary instance.
+So first clean up the instances from BooleanAlgebra.Support.Arbitrary,
+put them here and then implement generic shrinking.
+
+-- Produce smaller subsets of a term.
+
+Useful for generating tests, e.g. using QuickCheck's @Arbitrary@.
+
+shrinkTerm :: Term (Op uop bop flop) val var -> [Term (Op uop bop flop) val var]
+shrinkTerm (BUOp op t) = t : [BUOp op t' | t' <- shrinkTerm t]
+shrinkTerm (BBOp op a b) = a : b : [BBOp op a' b' | (a', b') <- shrinkTerm (a, b)]
+shrinkTerm _ = []
+
+-}

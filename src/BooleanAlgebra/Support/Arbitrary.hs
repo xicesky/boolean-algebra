@@ -128,6 +128,11 @@ generateBA = do
 instance Arbitrary (BooleanExpr String) where
     arbitrary = generateBA
 
+    shrink (BUOp op t) = t : [BUOp op t' | t' <- shrink t]
+    shrink (BBOp op a b) = a : b : [BBOp op a' b' | (a', b') <- shrink (a, b)]
+    shrink (BFlOp op xs) = xs ++ [BFlOp op xs' | xs' <- shrink xs]
+    shrink _ = []
+
 -- -- FIXME: Weird slow and ineffective
 -- -- Generate BooleanExprLit directly instead
 
