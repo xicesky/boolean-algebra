@@ -29,6 +29,9 @@ module Term.Term
     ,    -- * Dirty details
         ProperRecT(..)
     ,   ProperOpTag(..)
+    ,   Associativity(..)
+    ,   isLeftAssociative
+    ,   isRightAssociative
     ) where
 
 import Data.Kind (Type)
@@ -219,9 +222,28 @@ deriving instance Foldable (Op uop bop flop)
 deriving instance Traversable (Op uop bop flop)
 
 {-----------------------------------------------------------------------------}
--- TODO: Just as bad as ProperRecT, remove it
+
+-- | Binary operator associativity
+data Associativity
+    = NonAssociative
+    | LeftAssociative
+    | RightAssociative
+    | FullyAssociative
+
+isLeftAssociative :: Associativity -> Bool
+isLeftAssociative LeftAssociative = True
+isLeftAssociative FullyAssociative = True
+isLeftAssociative _ = False
+
+isRightAssociative :: Associativity -> Bool
+isRightAssociative RightAssociative = True
+isRightAssociative FullyAssociative = True
+isRightAssociative _ = False
+
 class (Show o, Eq o, Ord o) => ProperOpTag o where
     opPrec :: o -> Int
+    opAssoc :: o -> Associativity
+    opAssoc _ = NonAssociative
     opName :: o -> String
     opName = show
 

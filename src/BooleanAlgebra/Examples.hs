@@ -62,64 +62,17 @@ exampleExpr05 = not $
     (not (var "a") `or` var "b")
     `and` not (var "c" `and` var "d")
 
-{-  FIXME: use naming monad to create?
+{- | This is an example for the pretty-printer
 
--- | An example of the 'CNF' type
-exampleCNF :: CNF
-exampleCNF = cnfFromList [ [ lPos "a", lNeg "b" ], [ lNeg "c", lPos "d" ] ]
+It should require no parentheses (it's in DNF).
 
+Try it yourself:
+>>> pretty exampleExpr06
 -}
-
-{-----------------------------------------------------------------------------}
--- Example substitutions on variables
-
--- -- | Renames variables (by prepending 'z')
--- exampleSubst01 :: BooleanExpr -> BooleanExpr
--- exampleSubst01 = substVar hom where
---     hom :: BooleanVariable a -> Context BooleanBaseF a
---     hom (BVariable s) = iBVariable $ 'z' : s
-
--- {- | Eliminate variables by substituting "true" for all of them
-
--- >>> printBool $ exampleSubst02 $ exampleExpr05
--- >>> printBool $ simplify $ exampleSubst02 $ exampleExpr05
--- -}
--- exampleSubst02 :: BooleanExpr -> BooleanExprNoVars
--- exampleSubst02 = substVar hom where
---     hom :: BooleanVariable a -> Context BooleanBaseNoVarsF a
---     hom (BVariable s) = iBooleanValue True
-
--- {- | Replace variables with another term from an environment (map)
-
--- >>> printBool $ exampleSubst03 $ exampleExpr05
--- >>> printBool $ simplify $ exampleSubst03 $ exampleExpr05
--- -}
--- exampleSubst03 :: BooleanExpr -> BooleanExpr
--- exampleSubst03 = substitute' env where
---     env :: HashMap String BooleanExpr
---     env = fromList
---         [   ("a",   not (var "a")       )
---         ,   ("c",   false               )
---         ]
-
--- {- | Eliminate variables by substituting values
-
--- >>> printBool $ exampleSubst04 $ exampleExpr05
--- >>> printBool $ simplify $ exampleSubst04 $ exampleExpr05
--- -}
--- exampleSubst04 :: BooleanExpr -> BooleanExprNoVars
--- exampleSubst04 term = let
---     env :: HashMap String BooleanExprNoVars
---     env = fromList
---         [   ("a",   iBooleanValue True  )
---         ,   ("b",   iBooleanValue False )
---         ,   ("c",   iBooleanValue False )
---         ,   ("d",   iBooleanValue False )
---         ]
---     err :: String -> Except String (Context g a)
---     err s = throwError $ "Unmapped variable " ++ s
---     in case runExcept $ substituteM env err term of
---         Left message -> error message       -- Well, this just an example
---         Right term -> term
+exampleExpr06 :: BooleanExpr String
+exampleExpr06 = var "a" && not (var "b")
+    || var "b" && var "c"
+    || not (var "a") && var "c"
+    || not (var "a") && not (var "b") && not (var "c")
 
 {-----------------------------------------------------------------------------}

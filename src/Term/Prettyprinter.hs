@@ -10,6 +10,9 @@ Stability       : experimental
 module Term.Prettyprinter
     (   -- * Pretty printing
         PrettyTerm(..)
+    ,   PrettyUnaryOp(..)
+    ,   PrettyBinaryOp(..)
+    ,   PrettyFlatOp(..)
 
     ,   -- * Options
         PrettyOptions(..)
@@ -31,6 +34,7 @@ module Term.Prettyprinter
 
 import Data.Void (Void)
 import Data.String (IsString(..))
+import Data.Bool (bool)
 
 import Prettyprinter
 -- For diagnosis - showing internal pretty-printer state
@@ -41,6 +45,7 @@ import Term.Term
 {-# ANN module ("HLint: ignore Use newtype instead of data" :: String) #-}
 
 {-----------------------------------------------------------------------------}
+-- Main interface
 
 data PrettyOptions = PrettyOptions
     {   produceValidHaskell :: Bool
@@ -62,14 +67,6 @@ class PrettyTerm t where
         PrettyOptions -> Precedence -> t -> Doc ann
     prettyTerm _ _ = viaShow
 
-    {- | Pretty print a variable name
-
-    Override when variables should printed differently than values,
-    for example for @String@, when not producing haskell output.
-    -}
-    prettyVar :: PrettyOptions -> Precedence -> t -> Doc ann
-    prettyVar = prettyTerm
-
     {- | Default implementation for 'Pretty' instances
     -}
     defaultPretty :: t -> Doc ann
@@ -83,6 +80,7 @@ class PrettyTerm1 f where
     -- = --
 
 {-----------------------------------------------------------------------------}
+-- Fixpoint & Term instances
 
 instance PrettyTerm1 (f a b c) => PrettyTerm (Fix4 f a b c) where
     prettyTerm :: forall ann.
@@ -97,33 +95,67 @@ instance (PrettyTerm val, PrettyTerm var, PrettyTerm1 op)
         ConstT v        -> parensP d 10 $
             fromString "Val" <+> prettyTerm opts d v
         VariableT v     -> parensP d 10 $
-            fromString "Var" <+> prettyVar opts d v
+            fromString "Var" <+> prettyTerm opts d v
         RecT v          -> liftPrettyTerm1 prettyR opts d v
 
-instance PrettyTerm1 (Op uop bop flop) where
+instance (PrettyUnaryOp uop, PrettyBinaryOp bop, PrettyFlatOp flop)
+    => PrettyTerm1 (Op uop bop flop) where
     liftPrettyTerm1 prettyR opts d = \case
         UnaryOp o t     -> parensP d (opPrec o) $
-            -- FIXME: let operator handle it
-            fromString (opName o) <+> prettyR opts (opPrec o + 1) t
+            prettyUnaryOp (prettyR opts) opts d o t
         BinaryOp o a b  -> parensP d (opPrec o) $
-            prettyR opts (opPrec o + 1) a
-            <+> backticks (fromString $ opName o)
-            <+> prettyR opts (opPrec o + 1) b
+            prettyBinaryOp (prettyR opts) opts d o a b
         FlatOp o xs     -> parensP d (opPrec o) $ group $
-            fromString (opName o) <+> aList (prettyR opts 0) xs
+            prettyFlatOp (prettyR opts) opts d o xs
 
 instance (PrettyTerm val, PrettyTerm var, PrettyTerm1 op)
     => Pretty (Term op val var) where
     pretty = defaultPretty
 
 {-----------------------------------------------------------------------------}
+-- Operators
+
+class ProperOpTag o => PrettyUnaryOp o where
+    prettyUnaryOp :: (Precedence -> t -> Doc ann)
+        -> PrettyOptions -> Precedence -> o -> t -> Doc ann
+    prettyUnaryOp prettyR opts d op arg =
+        prettyPrefix opts op <+> prettyR (opPrec op + 1) arg
+
+    prettyPrefix :: PrettyOptions -> o -> Doc ann
+    prettyPrefix _ op = fromString (opName op)
+
+class ProperOpTag o => PrettyBinaryOp o where
+    prettyBinaryOp :: (Precedence -> t -> Doc ann)
+        -> PrettyOptions -> Precedence -> o -> t -> t -> Doc ann
+    prettyBinaryOp prettyR opts d op l r = let
+            prec = opPrec op
+            assoc = opAssoc op
+            lprec = bool (prec + 1) prec $ isLeftAssociative assoc
+            rprec = bool (prec + 1) prec $ isRightAssociative assoc
+        in prettyR lprec l
+        <+> prettyInfix opts op
+        <+> prettyR rprec r
+
+    prettyInfix :: PrettyOptions -> o -> Doc ann
+    prettyInfix _ op = backticks (fromString $ opName op)
+
+class ProperOpTag o => PrettyFlatOp o where
+    prettyFlatOp :: (Precedence -> t -> Doc ann)
+        -> PrettyOptions -> Precedence -> o -> [t] -> Doc ann
+    prettyFlatOp prettyR opts d op args =
+        group $ fromString (opName op)
+        <+> aList (prettyR 0) args
+
+{-----------------------------------------------------------------------------}
 -- Instances for common variable / value types
 
 instance PrettyTerm String where
     prettyTerm _ _ = viaShow
-    prettyVar _ _ s = fromString s
 
 instance PrettyTerm Void
+instance PrettyUnaryOp Void
+instance PrettyBinaryOp Void
+instance PrettyFlatOp Void
 
 {-----------------------------------------------------------------------------}
 
@@ -134,13 +166,13 @@ diag' = diag . fuse Deep
 -- Nested, comma-aligned list
 aList :: (a -> Doc ann) -> [a] -> Doc ann
 aList pp xs = flatAlt multiline singleline where
-    lbr = flatAlt "[ " "["
-    rbr = flatAlt (line <> "]") "]"
     sep = ", "
     docs = fmap pp xs
     multiline = nest 4 $ line
-        <> encloseSep lbr rbr sep docs
-    singleline = encloseSep lbr rbr sep docs
+        -- FIXME: encloseSep uses 'cat' which will sometimes display
+        -- elements in the same line. We want all or nothing.
+        <> encloseSep "[ " (line <> "]") sep docs
+    singleline = encloseSep "[" "]" sep docs
 
 -- | Show parens depending on precedence
 parensP :: Precedence -> Precedence -> Doc ann -> Doc ann

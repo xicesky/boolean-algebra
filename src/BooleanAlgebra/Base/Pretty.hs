@@ -76,6 +76,15 @@ instance Show name => PrettyTerm (CNF name) where
 instance Show name => Pretty (CNF name) where
     pretty = defaultPretty
 
+instance PrettyUnaryOp BooleanUOp where
+    prettyPrefix _ BooleanNot = fromString "not"
+
+instance PrettyBinaryOp BooleanBOp where
+    prettyInfix _ BooleanAnd = fromString "&&"
+    prettyInfix _ BooleanOr = fromString "||"
+
+instance PrettyFlatOp BooleanFlatOp
+
 {-----------------------------------------------------------------------------}
 -- Instances for base types
 

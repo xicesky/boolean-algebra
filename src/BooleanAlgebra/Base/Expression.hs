@@ -63,15 +63,17 @@ data BooleanBOp = BooleanAnd | BooleanOr
 data BooleanFlatOp = BConjunction | BDisjunction
     deriving (Show, Eq, Ord)
 
-instance ProperOpTag BooleanBOp where
-    opPrec BooleanAnd = 6
-    opPrec BooleanOr = 3
-    opName BooleanAnd = "BAnd"
-    opName BooleanOr = "BOr"
-
 instance ProperOpTag BooleanUOp where
     opPrec BooleanNot = 10
     opName BooleanNot = "BNot"
+
+instance ProperOpTag BooleanBOp where
+    opPrec BooleanAnd = 6
+    opPrec BooleanOr = 3
+    opAssoc BooleanAnd = FullyAssociative
+    opAssoc BooleanOr = FullyAssociative
+    opName BooleanAnd = "BAnd"
+    opName BooleanOr = "BOr"
 
 instance ProperOpTag BooleanFlatOp where
     opPrec BConjunction = 6

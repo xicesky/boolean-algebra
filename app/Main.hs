@@ -2,6 +2,7 @@
 module Main where
 
 import Data.Void (Void)
+import Control.Monad
 import qualified Data.Map.Strict as Map
 import Control.Monad.IO.Class
 import Criterion.Main
@@ -26,23 +27,28 @@ Inspiration for solver:
     http://hackage.haskell.org/package/cflp
 -}
 
-demo :: BooleanExpr String -> IO ()
-demo ex = do
+demo :: Bool -> BooleanExpr String -> IO ()
+demo doCNF ex = do
+    -- FIXME: Use pretty && fill instead of custom spaces
     print $ fromString "Original    :" <+> align (pretty ex)
     print $ fromString "Simplified  :" <+> align (pretty $ simplify ex)
     -- The intermediate form doesn't really show anything fancy
     --putStr "Intermediate: "; printBool $ aggregateConjDisj' $ simplify ex
-    print $ fromString "CNF         :" <+> align (pretty $ toCNF ex)
+    when doCNF $
+        print $ fromString "CNF         :" <+> align (pretty $ toCNF ex)
 
 standardDemo :: IO ()
 standardDemo = do
     -- pslBE exampleExpr01
     -- pslBE exampleExpr02
     -- pslBE (simplifyPrimitive exampleExpr02)
-    demo exampleExpr01
+    demo True exampleExpr01
     putStrLn ""
 
-    demo exampleExpr05
+    demo True exampleExpr05
+    putStrLn ""
+
+    demo False exampleExpr06
     putStrLn ""
 
 formatMinisatResult :: forall a. (Show a, Ord a) => SatResult a -> String
