@@ -6,6 +6,8 @@ import Prelude hiding (and, or, not, (&&), (||))
 
 import BooleanAlgebra
 
+{-# ANN module "HLint: Move brackets to avoid $" #-}
+
 {-----------------------------------------------------------------------------}
 -- Easy examples
 
@@ -59,6 +61,41 @@ sortList = let
             forAll ns $ \j ->
             define (i `smallerThan` j) (i < j)
         ]
+
+{-----------------------------------------------------------------------------}
+-- Pidgeonhole problem
+
+-- | Fit @n@ pidgeons into @m@ holes.
+pidgeonHole :: forall b. BooleanAlgebra b => Int -> Int -> b
+pidgeonHole n m = let
+    
+    goesIn :: Int -> Int -> b
+    goesIn p h = var $ "P" ++ show p ++ "H" ++ show h
+    
+    pidgeons :: [Int]
+    pidgeons = [1..n]
+
+    holes :: [Int]
+    holes = [1..m]
+
+    in
+    (   -- Choose a hole for each pidgeon
+        forAll pidgeons $ \p ->
+        existsUnique holes $ \h ->
+        p `goesIn` h
+    ) && (
+        -- At most one pidgeon per hole
+        forAll holes $ \h ->
+        unique pidgeons $ \p ->
+        p `goesIn` h
+    )
+
+{- | The unsolvable version
+
+Fit @n@ pidgeons into @n-1@ holes.
+-}
+pidgeonHole' :: forall b. BooleanAlgebra b => Int -> b
+pidgeonHole' n = pidgeonHole n (n-1)
 
 {-----------------------------------------------------------------------------}
 -- Sudoku WIP

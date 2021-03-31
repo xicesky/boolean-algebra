@@ -1,4 +1,6 @@
 
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module BooleanAlgebra.Solver.ClassSpec where
 
 import Control.Exception (throwIO)
@@ -16,7 +18,21 @@ import BooleanAlgebra
 import BooleanAlgebra.Format.Dimacs (toDimacs, toDimacsVars)
 import BooleanAlgebra.Support.Minisat
 
+-- TODO: useful examples should be part of the library
+import Gen (pidgeonHole')
+
+import Debug.Trace
+
 {-# ANN module "HLint: ignore Redundant $" #-}
+
+{-----------------------------------------------------------------------------}
+
+-- | Helper for generating VERY small natural numbers: 1 <= n <= 5
+newtype VerySmallNat = VerySmallNat Int
+    deriving (Show, Eq, Ord, Num, Bounded, Enum)
+
+instance Arbitrary VerySmallNat where
+    arbitrary = chooseEnum (1, 5)
 
 {-----------------------------------------------------------------------------}
 
@@ -36,6 +52,15 @@ prop_solves_CNF s timeLimit expr = within timeLimit $ monadicIO $ let
         r1 <- runSolver s cnf1
         r2 <- runSolver s cnf2
         assert (r1 `eqSat` r2)
+
+prop_detects_unsat :: Solver s IO => s -> Int -> VerySmallNat -> Property
+prop_detects_unsat s timeLimit (VerySmallNat probSize) = (probSize > 1) ==>
+    withMaxSuccess 10 $ -- reduce amount of runs
+    within timeLimit $ monadicIO $ do
+        --traceM $ "prop_detects_unsat s " ++ show probSize
+        -- We are using 'toCNF' here, because it's already in CNF
+        result <- runSolver s $ toCNF $ (pidgeonHole' probSize :: BooleanExpr String)
+        assert (result == Unsat)
 
 {-----------------------------------------------------------------------------}
 -- For interactive use only
@@ -74,18 +99,25 @@ qcEx1 :: IO ()
 qcEx1 = quickCheck $ -- quickCheckWith (stdArgs {maxShrinks = 3}) $ 
     mapSize (`div` 2) $ prop_solves_CNF BasicSolver 100000
 
+quickSolve :: BooleanExpr String -> IO (Either (SatError String) (SatResult String))
+quickSolve = solve' BasicSolver . toCNF
+
 {-----------------------------------------------------------------------------}
 -- HSpec
 
 spec_BasicSolver :: Spec
-spec_BasicSolver = describe "BasicSolver" $
+spec_BasicSolver = describe "BasicSolver" $ do
     prop "solves CNF" $ mapSize (`div` 8) $ -- yes, div 8. This solver is slow.
         prop_solves_CNF BasicSolver 100000
+    prop "detects UNSAT" $
+        prop_detects_unsat BasicSolver 100000
 
 spec_Minisat :: Spec
-spec_Minisat = describe "Minisat" $
+spec_Minisat = describe "Minisat" $ do
     prop "solves CNF" $ mapSize (`div` 4) $ -- div 4 because to toCNF
         prop_solves_CNF (Minisat "minisat") 500000
+    prop "detects UNSAT" $
+        prop_detects_unsat BasicSolver 500000
 
 spec :: Spec
 spec = do

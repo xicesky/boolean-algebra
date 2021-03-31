@@ -9,6 +9,7 @@ module BooleanAlgebra.Base.Logic
     (   -- * Quantifiers
         forAll
     ,   exists
+    ,   unique
     ,   existsUnique
     ,   existsUnique'
 
@@ -30,6 +31,9 @@ instance Boolean b => Boolean (a -> b) where
     and a b i = and (a i) (b i)
     or  a b i = or  (a i) (b i)
 
+instance BooleanArithmetic b => BooleanArithmetic (a -> b) where
+    fromBool = const . fromBool
+
 {- Note: there is a (co?) monad here, i can smell it, just have to find it!
 ... and probably a nice QualifiedDo for stating rules!
 -}
@@ -45,42 +49,64 @@ instance Boolean b => Boolean (a -> b) where
 
 >>> forAll s $ \x -> p x
 -}
-forAll :: Boolean b => [a] -> (a -> b) -> b
-forAll s p = foldr1 and $ fmap p s
+forAll :: BooleanArithmetic b => [a] -> (a -> b) -> b
+forAll [] _ = true
+forAll s  p = foldr1 and $ fmap p s
 
 {- | There exists a value for which the given predicate is true.
+
+You can also think of this as "at least one".
 
 ∃(x ∈ s). p(x)
 
 >>> exists s $ \x -> p x
 -}
-exists :: Boolean b => [a] -> (a -> b) -> b
-exists s p = foldr1 or $ fmap p s
+exists :: BooleanArithmetic b => [a] -> (a -> b) -> b
+exists [] _ = false
+exists s  p = foldr1 or $ fmap p s
+
+{- | Uniqueness without definedness.
+
+If there is any @x@ with @p x@, then it is the only one.
+You can also think of this as "at most one".
+
+∀(x ∈ s). ∀(y ∈ s). p(x) ⇒ (x = y)
+
+>>> unique s $ \x -> p x
+-}
+unique :: (Eq a, BooleanAlgebra b) => [a] -> (a -> b) -> b
+unique s p =
+    forAll s $ \x ->        -- ∀(x ∈ s).
+    forAll s $ \y ->        -- ∀(y ∈ s).
+    given (x /= y) $        -- (x ≠ y) =>
+    p x `excludes` p y      -- ¬p(x) ∨ ¬p(y)
+
+{- | There exists a /unique/ value for which the given predicate is true.
+
+You can also think of this as "exactly one".
+
+∃(x ∈ s). ∀(y ∈ s). p(y) ⇔ (x = y)
+
+>>> existsUnique s $ \x -> p x
+-}
 
 -- This variant actually generates CNF
 -- TODO: Eliminate duplicate clauses (symmetry of `excludes`)
 existsUnique :: (Eq a, BooleanAlgebra b) => [a] -> (a -> b) -> b
-existsUnique s p = foldr1 and
-    [   exists s p              -- ∃(x ∈ s). p(x)
-    ,   forAll s $ \x1 ->       -- ∀(x1 ∈ s).
-        forAll s $ \x2 ->       -- ∀(x2 ∈ s).
-        given (x1 /= x2) $      -- (x1 ≠ x2) =>
-        p x1 `excludes` p x2    -- ¬p(x1) ∨ ¬p(x2)
-    ]
+existsUnique s p = exists s p && unique s p
 
--- This variant is nice and short, but generates irregular terms
--- (which make a nice test)
-{- | There exists a value for which the given predicate is true.
+{- | Alternate formulation of 'existsUnique'.
 
 _DO NOT USE_: This variant generates irregular terms (which can get
 very large when transforming to CNF). This is useful for some tests,
-but 'existsUnique' does the same thing.
+but 'existsUnique' does the same thing much more efficiently.
 
-∃(x ∈ s). p(x)
+There exists a value for which the given predicate is true.
 
->>> exists s $ \x -> p x
+∃(x ∈ s). ∀(y ∈ s). p(y) ⇔ (x = y)
+
+>>> existsUnique' s $ \x -> p x
 -}
-
 existsUnique' :: (Eq a, BooleanAlgebra b) => Boolean b => [a] -> (a -> b) -> b
 existsUnique' s p = exists s $ \x ->
     forAll s $ \y ->
