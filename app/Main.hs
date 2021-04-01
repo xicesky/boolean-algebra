@@ -30,12 +30,12 @@ Inspiration for solver:
 demo :: Bool -> BooleanExpr String -> IO ()
 demo doCNF ex = do
     -- FIXME: Use pretty && fill instead of custom spaces
-    print $ fromString "Original    :" <+> align (pretty ex)
-    print $ fromString "Simplified  :" <+> align (pretty $ simplify ex)
+    print $ fromString "Original    :" <+> align (prettyBool ex)
+    print $ fromString "Simplified  :" <+> align (prettyBool $ simplify ex)
     -- The intermediate form doesn't really show anything fancy
     --putStr "Intermediate: "; printBool $ aggregateConjDisj' $ simplify ex
     when doCNF $
-        print $ fromString "CNF         :" <+> align (pretty $ toCNF ex)
+        print $ fromString "CNF         :" <+> align (prettyBool $ toCNF ex)
 
 standardDemo :: IO ()
 standardDemo = do

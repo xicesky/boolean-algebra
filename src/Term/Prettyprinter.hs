@@ -47,6 +47,8 @@ import Term.Term
 {-----------------------------------------------------------------------------}
 -- Main interface
 
+-- TODO: This is not extensible, replace with dynamic option.
+-- Dumb idea: Can we have open product types with an open "default value"? :)
 data PrettyOptions = PrettyOptions
     {   produceValidHaskell :: Bool
     }
@@ -57,20 +59,33 @@ defaultPrettyOptions = PrettyOptions True
 type Precedence = Int
 
 class PrettyTerm t where
-    {- | Pretty-print a term with specific options
-
-    Note: In contrast to 'pretty', this function prefers to produce
-    valid haskell expressions.
+    {- | Pretty-print a term with specific options and precedence
     -}
     prettyTerm :: PrettyOptions -> Precedence -> t -> Doc ann
     default prettyTerm :: Show t =>
         PrettyOptions -> Precedence -> t -> Doc ann
     prettyTerm _ _ = viaShow
 
+    {- | Pretty print a variable name
+
+    Override when variables should printed differently than values,
+    for example for @String@, when not producing haskell output.
+    -}
+    prettyVar :: PrettyOptions -> Precedence -> t -> Doc ann
+    prettyVar = prettyTerm
+
+    {- | Pretty-print a term with specific options
+    -}
+    prettyOpts :: PrettyOptions -> t -> Doc ann
+    prettyOpts opts = prettyTerm opts 0
+
     {- | Default implementation for 'Pretty' instances
+
+    Note: In contrast to 'pretty', this function prefers to produce
+    valid haskell expressions.
     -}
     defaultPretty :: t -> Doc ann
-    defaultPretty = prettyTerm defaultPrettyOptions 0
+    defaultPretty = prettyOpts defaultPrettyOptions
     -- = --
 
 class PrettyTerm1 f where
@@ -93,9 +108,13 @@ instance (PrettyTerm val, PrettyTerm var, PrettyTerm1 op)
 
     liftPrettyTerm1 prettyR opts d = \case
         ConstT v        -> parensP d 10 $
-            fromString "Val" <+> prettyTerm opts d v
-        VariableT v     -> parensP d 10 $
-            fromString "Var" <+> prettyTerm opts d v
+            if produceValidHaskell opts
+                then fromString "Val" <+> prettyTerm opts d v
+                else prettyTerm opts d v
+        VariableT v     ->
+            if produceValidHaskell opts
+                then parensP d 10 $ fromString "Var" <+> prettyVar opts 11 v
+                else prettyVar opts d v
         RecT v          -> liftPrettyTerm1 prettyR opts d v
 
 instance (PrettyUnaryOp uop, PrettyBinaryOp bop, PrettyFlatOp flop)
@@ -118,11 +137,26 @@ instance (PrettyTerm val, PrettyTerm var, PrettyTerm1 op)
 class ProperOpTag o => PrettyUnaryOp o where
     prettyUnaryOp :: (Precedence -> t -> Doc ann)
         -> PrettyOptions -> Precedence -> o -> t -> Doc ann
-    prettyUnaryOp prettyR opts d op arg =
-        prettyPrefix opts op <+> prettyR (opPrec op + 1) arg
+    prettyUnaryOp prettyR opts d op arg = let
+        {- This is a pretty dumb but effective heuristic to determine
+            if "unicodePrefix" is actually implemented.
+        -}
+        needSpace = produceValidHaskell opts
+            || show (haskellPrefix op) == show (unicodePrefix op)
+        apnd = if needSpace then (<+>) else (<>)
+        in prettyPrefix opts op `apnd` prettyR (opPrec op + 1) arg
 
     prettyPrefix :: PrettyOptions -> o -> Doc ann
-    prettyPrefix _ op = fromString (opName op)
+    prettyPrefix opts op =
+        if produceValidHaskell opts
+            then haskellPrefix op
+            else unicodePrefix op
+
+    haskellPrefix :: o -> Doc ann
+    haskellPrefix op = fromString (opName op)
+
+    unicodePrefix :: o -> Doc ann
+    unicodePrefix = haskellPrefix
 
 class ProperOpTag o => PrettyBinaryOp o where
     prettyBinaryOp :: (Precedence -> t -> Doc ann)
@@ -137,7 +171,16 @@ class ProperOpTag o => PrettyBinaryOp o where
         <+> prettyR rprec r
 
     prettyInfix :: PrettyOptions -> o -> Doc ann
-    prettyInfix _ op = backticks (fromString $ opName op)
+    prettyInfix opts op =
+        if produceValidHaskell opts
+            then haskellInfix op
+            else unicodeInfix op
+
+    haskellInfix :: o -> Doc ann
+    haskellInfix op = backticks (fromString $ opName op)
+
+    unicodeInfix :: o -> Doc ann
+    unicodeInfix = haskellInfix
 
 class ProperOpTag o => PrettyFlatOp o where
     prettyFlatOp :: (Precedence -> t -> Doc ann)
@@ -151,6 +194,9 @@ class ProperOpTag o => PrettyFlatOp o where
 
 instance PrettyTerm String where
     prettyTerm _ _ = viaShow
+    prettyVar opts _
+        | produceValidHaskell opts = viaShow
+        | otherwise = fromString
 
 instance PrettyTerm Void
 instance PrettyUnaryOp Void
