@@ -30,7 +30,7 @@ import BooleanAlgebra.Base.Expression
 {-----------------------------------------------------------------------------}
 
 -- | Pretty-print using boolean logic symbols
-prettyBool :: PrettyTerm a => a -> Doc ann
+prettyBool :: PrettyTerm a => a -> Doc Ann
 prettyBool = prettyOpts (defaultPrettyOptions
     {   produceValidHaskell = False
     })

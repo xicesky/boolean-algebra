@@ -20,6 +20,7 @@ module Term.Prettyprinter
 
     ,   -- * Utilities
         Precedence
+    ,   Ann(..)
     ,   PrettyTerm1(..)
     ,   diag'
     ,   aList
@@ -37,6 +38,7 @@ import Data.String (IsString(..))
 import Data.Bool (bool)
 
 import Prettyprinter
+import Prettyprinter.Render.Util.SimpleDocTree
 -- For diagnosis - showing internal pretty-printer state
 import Prettyprinter.Internal.Debug (diag, Diag)
 
@@ -58,12 +60,17 @@ defaultPrettyOptions = PrettyOptions True
 
 type Precedence = Int
 
+-- | Semantic annotations
+data Ann
+    = Operator
+    | Variable
+
 class PrettyTerm t where
     {- | Pretty-print a term with specific options and precedence
     -}
-    prettyTerm :: PrettyOptions -> Precedence -> t -> Doc ann
+    prettyTerm :: PrettyOptions -> Precedence -> t -> Doc Ann
     default prettyTerm :: Show t =>
-        PrettyOptions -> Precedence -> t -> Doc ann
+        PrettyOptions -> Precedence -> t -> Doc Ann
     prettyTerm _ _ = viaShow
 
     {- | Pretty print a variable name
@@ -71,12 +78,12 @@ class PrettyTerm t where
     Override when variables should printed differently than values,
     for example for @String@, when not producing haskell output.
     -}
-    prettyVar :: PrettyOptions -> Precedence -> t -> Doc ann
+    prettyVar :: PrettyOptions -> Precedence -> t -> Doc Ann
     prettyVar = prettyTerm
 
     {- | Pretty-print a term with specific options
     -}
-    prettyOpts :: PrettyOptions -> t -> Doc ann
+    prettyOpts :: PrettyOptions -> t -> Doc Ann
     prettyOpts opts = prettyTerm opts 0
 
     {- | Default implementation for 'Pretty' instances
@@ -85,21 +92,20 @@ class PrettyTerm t where
     valid haskell expressions.
     -}
     defaultPretty :: t -> Doc ann
-    defaultPretty = prettyOpts defaultPrettyOptions
+    defaultPretty = unAnnotate . prettyOpts defaultPrettyOptions
     -- = --
 
 class PrettyTerm1 f where
-    liftPrettyTerm1 :: forall a ann.
-            (PrettyOptions -> Precedence -> a -> Doc ann)
-        -> PrettyOptions -> Precedence -> f a -> Doc ann
+    liftPrettyTerm1 :: forall a.
+            (PrettyOptions -> Precedence -> a -> Doc Ann)
+        -> PrettyOptions -> Precedence -> f a -> Doc Ann
     -- = --
 
 {-----------------------------------------------------------------------------}
 -- Fixpoint & Term instances
 
 instance PrettyTerm1 (f a b c) => PrettyTerm (Fix4 f a b c) where
-    prettyTerm :: forall ann.
-        PrettyOptions -> Precedence -> Fix4 f a b c -> Doc ann
+    prettyTerm :: PrettyOptions -> Precedence -> Fix4 f a b c -> Doc Ann
     prettyTerm opts d (Fix4 f) =
         liftPrettyTerm1 prettyTerm opts d f
 
@@ -135,8 +141,8 @@ instance (PrettyTerm val, PrettyTerm var, PrettyTerm1 op)
 -- Operators
 
 class ProperOpTag o => PrettyUnaryOp o where
-    prettyUnaryOp :: (Precedence -> t -> Doc ann)
-        -> PrettyOptions -> Precedence -> o -> t -> Doc ann
+    prettyUnaryOp :: (Precedence -> t -> Doc Ann)
+        -> PrettyOptions -> Precedence -> o -> t -> Doc Ann
     prettyUnaryOp prettyR opts d op arg = let
         {- This is a pretty dumb but effective heuristic to determine
             if "unicodePrefix" is actually implemented.
@@ -146,21 +152,21 @@ class ProperOpTag o => PrettyUnaryOp o where
         apnd = if needSpace then (<+>) else (<>)
         in prettyPrefix opts op `apnd` prettyR (opPrec op + 1) arg
 
-    prettyPrefix :: PrettyOptions -> o -> Doc ann
+    prettyPrefix :: PrettyOptions -> o -> Doc Ann
     prettyPrefix opts op =
         if produceValidHaskell opts
             then haskellPrefix op
             else unicodePrefix op
 
-    haskellPrefix :: o -> Doc ann
+    haskellPrefix :: o -> Doc Ann
     haskellPrefix op = fromString (opName op)
 
-    unicodePrefix :: o -> Doc ann
+    unicodePrefix :: o -> Doc Ann
     unicodePrefix = haskellPrefix
 
 class ProperOpTag o => PrettyBinaryOp o where
-    prettyBinaryOp :: (Precedence -> t -> Doc ann)
-        -> PrettyOptions -> Precedence -> o -> t -> t -> Doc ann
+    prettyBinaryOp :: (Precedence -> t -> Doc Ann)
+        -> PrettyOptions -> Precedence -> o -> t -> t -> Doc Ann
     prettyBinaryOp prettyR opts d op l r = let
             prec = opPrec op
             assoc = opAssoc op
@@ -170,21 +176,21 @@ class ProperOpTag o => PrettyBinaryOp o where
         <+> prettyInfix opts op
         <+> prettyR rprec r
 
-    prettyInfix :: PrettyOptions -> o -> Doc ann
+    prettyInfix :: PrettyOptions -> o -> Doc Ann
     prettyInfix opts op =
         if produceValidHaskell opts
             then haskellInfix op
             else unicodeInfix op
 
-    haskellInfix :: o -> Doc ann
+    haskellInfix :: o -> Doc Ann
     haskellInfix op = backticks (fromString $ opName op)
 
-    unicodeInfix :: o -> Doc ann
+    unicodeInfix :: o -> Doc Ann
     unicodeInfix = haskellInfix
 
 class ProperOpTag o => PrettyFlatOp o where
-    prettyFlatOp :: (Precedence -> t -> Doc ann)
-        -> PrettyOptions -> Precedence -> o -> [t] -> Doc ann
+    prettyFlatOp :: (Precedence -> t -> Doc Ann)
+        -> PrettyOptions -> Precedence -> o -> [t] -> Doc Ann
     prettyFlatOp prettyR opts d op args =
         group $ fromString (opName op)
         <+> aList (prettyR 0) args
@@ -235,3 +241,13 @@ backticks = enclose backtick backtick
 -- `
 backtick :: Doc ann
 backtick = fromString "`"
+
+{-----------------------------------------------------------------------------}
+-- Rendering
+
+{-
+FIXME: This always renders with ANSI colors, so we need to add some
+terminal detection to it, e.g. like:
+http://hackage.haskell.org/package/pretty-simple-4.0.0.0/docs/src/Text.Pretty.Simple.Internal.Printer.html
+-}
+
