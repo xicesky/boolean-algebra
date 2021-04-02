@@ -23,13 +23,22 @@ import Prelude hiding (concat)
 import qualified Prelude as P
 import Data.Maybe (fromMaybe)
 import Data.Foldable as F
+import Data.String (IsString(..))
 
 import Control.Monad.Writer
+
+-- Data.Text is textual
 import Data.Text as T
 import Data.Text.Encoding
+
+-- Bytestring for binary encoding is textual
 import Data.ByteString as B
 import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Builder
+
+-- Prettyprinter 'Doc' is textual
+import Prettyprinter
+import Prettyprinter.Render.Text
 
 {-----------------------------------------------------------------------------}
 
@@ -48,7 +57,7 @@ foldText' = foldText id (tChar ' ')
 
 {- | A monad for textual representations
 
-e.g. ASCII or UTF-8
+e.g. Native string, ASCII or UTF-8 encoded binary strings
 -}
 class Monoid m => Textual m where
     {- | Convert back to a string
@@ -151,5 +160,21 @@ instance Textual UTF8Builder where
     textualToText = decodeUtf8 . toStrictByteString
     tIntDec = intDec
     tIntegerDec = integerDec
+
+{-----------------------------------------------------------------------------}
+-- Prettyprinter Doc
+
+instance Textual (Doc ann) where
+    textualToString = show
+    tChar ch = fromString [ch]
+    tString = fromString
+
+    textualToText doc = renderStrict $
+        layoutPretty defaultLayoutOptions doc
+
+    tNewline = hardline
+
+    tIntDec = viaShow
+    tIntegerDec = viaShow
 
 {-----------------------------------------------------------------------------}

@@ -49,15 +49,25 @@ import Term.Term
 
 -- TODO: This is not extensible, replace with dynamic option.
 -- Dumb idea: Can we have open product types with an open "default value"? :)
+
+-- | Options for the pretty-printer
 data PrettyOptions = PrettyOptions
     {   produceValidHaskell :: Bool
+        -- ^ 'True': produce valid Haskell expressions
+        -- 'False': produce terser, human-readable output
     }
 
+{- | Default options for the pretty-printer
+
+Used when omitting options, e.g. by using 'pretty' on 'Term'
+-}
 defaultPrettyOptions :: PrettyOptions
 defaultPrettyOptions = PrettyOptions True
 
 type Precedence = Int
 
+{- | Class of pretty-printable terms
+-}
 class PrettyTerm t where
     {- | Pretty-print a term with specific options and precedence
     -}
@@ -88,7 +98,15 @@ class PrettyTerm t where
     defaultPretty = prettyOpts defaultPrettyOptions
     -- = --
 
+{- | Class of liftable pretty-printable terms.
+-}
 class PrettyTerm1 f where
+    {- | Lifted pretty-printing of @f a@.
+
+    Analogous to the relation between 'liftShow' to 'show', 'liftPrettyTerm1'
+    runs the pretty-printer for a type @f a@, given a pretty-printing function
+    for the type @a@.
+    -}
     liftPrettyTerm1 :: forall a ann.
             (PrettyOptions -> Precedence -> a -> Doc ann)
         -> PrettyOptions -> Precedence -> f a -> Doc ann
@@ -134,7 +152,14 @@ instance (PrettyTerm val, PrettyTerm var, PrettyTerm1 op)
 {-----------------------------------------------------------------------------}
 -- Operators
 
+{- | Pretty-printing of unary operators
+-}
 class ProperOpTag o => PrettyUnaryOp o where
+    {- | Pretty-print @o t@ for the unary operator @o@.
+
+    The default implementation prints the operator as a prefix using
+    'prettyPrefix'.
+    -}
     prettyUnaryOp :: (Precedence -> t -> Doc ann)
         -> PrettyOptions -> Precedence -> o -> t -> Doc ann
     prettyUnaryOp prettyR opts d op arg = let
@@ -146,19 +171,29 @@ class ProperOpTag o => PrettyUnaryOp o where
         apnd = if needSpace then (<+>) else (<>)
         in prettyPrefix opts op `apnd` prettyR (opPrec op + 1) arg
 
+    -- | Produce the prefix representation of the operator
     prettyPrefix :: PrettyOptions -> o -> Doc ann
     prettyPrefix opts op =
         if produceValidHaskell opts
             then haskellPrefix op
             else unicodePrefix op
 
+    -- | Show the prefix operator as valid haskell expression
     haskellPrefix :: o -> Doc ann
     haskellPrefix op = fromString (opName op)
 
+    -- | Show the prefix operator as terse unicode
     unicodePrefix :: o -> Doc ann
     unicodePrefix = haskellPrefix
 
+{- | Pretty-printing of binary operators
+-}
 class ProperOpTag o => PrettyBinaryOp o where
+    {- | Pretty-print @t1 o t2@ for the binary operator @o@.
+
+    The default implementation prints the operator as a infix using
+    'prettyInfix'.
+    -}
     prettyBinaryOp :: (Precedence -> t -> Doc ann)
         -> PrettyOptions -> Precedence -> o -> t -> t -> Doc ann
     prettyBinaryOp prettyR opts d op l r = let
@@ -170,19 +205,28 @@ class ProperOpTag o => PrettyBinaryOp o where
         <+> prettyInfix opts op
         <+> prettyR rprec r
 
+    -- | Produce the infix representation of the operator
     prettyInfix :: PrettyOptions -> o -> Doc ann
     prettyInfix opts op =
         if produceValidHaskell opts
             then haskellInfix op
             else unicodeInfix op
 
+    -- | Show the infix operator as valid haskell expression
     haskellInfix :: o -> Doc ann
     haskellInfix op = backticks (fromString $ opName op)
 
+    -- | Show the infix operator as terse unicode
     unicodeInfix :: o -> Doc ann
     unicodeInfix = haskellInfix
 
+{- | Pretty-printing of flattened operators
+-}
 class ProperOpTag o => PrettyFlatOp o where
+    {- | Pretty-print @o t0 t1 ...@ for the flat operator @o@.
+
+    The default implementation prints the operator followed by a list.
+    -}
     prettyFlatOp :: (Precedence -> t -> Doc ann)
         -> PrettyOptions -> Precedence -> o -> [t] -> Doc ann
     prettyFlatOp prettyR opts d op args =
@@ -205,11 +249,11 @@ instance PrettyFlatOp Void
 
 {-----------------------------------------------------------------------------}
 
--- Diagnosis tool
+-- | Diagnosis tool for showing the internal representation
 diag' :: Doc () -> Diag ()
 diag' = diag . fuse Deep
 
--- Nested, comma-aligned list
+-- | Nested, left-aligned, comma-seperated list
 aList :: (a -> Doc ann) -> [a] -> Doc ann
 aList pp xs = flatAlt multiline singleline where
     sep = ", "
@@ -220,7 +264,7 @@ aList pp xs = flatAlt multiline singleline where
         <> encloseSep "[ " (line <> "]") sep docs
     singleline = encloseSep "[" "]" sep docs
 
--- | Show parens depending on precedence
+-- | Show parentheses depending on precedence
 parensP :: Precedence -> Precedence -> Doc ann -> Doc ann
 parensP d prec
     | d > prec  = parens

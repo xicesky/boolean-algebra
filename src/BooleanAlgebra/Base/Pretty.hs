@@ -5,7 +5,6 @@
 Description     : Pretty-printer
 Stability       : experimental
 
-Not yet implemented!
 -}
 module BooleanAlgebra.Base.Pretty
     (   -- * Temporary replacements
