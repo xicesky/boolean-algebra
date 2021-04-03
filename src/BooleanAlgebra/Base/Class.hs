@@ -1,6 +1,7 @@
 
 {-# LANGUAGE PatternSynonyms        #-}
 {-# LANGUAGE DefaultSignatures      #-}
+{-# LANGUAGE FunctionalDependencies #-}
 
 {- |
 Description     : Generalized boolean algebras
@@ -17,7 +18,6 @@ module BooleanAlgebra.Base.Class
         PreBoolean(..)
     ,   Boolean(..)
     ,   BooleanArithmetic(..)
-    ,   BooleanPreAlgebra(..)
     ,   BooleanAlgebra(..)
 
     ,   -- * Boolean operators
@@ -92,14 +92,11 @@ class Boolean b => BooleanArithmetic b where
     false :: b
     false = fromBool False
 
--- FIXME: Strings are bad
--- | Boolean pre-algebra has variables (but not necessarily values)
-class Boolean b => BooleanPreAlgebra b where
-    -- | Represent a variable in the target algebra
-    var :: String -> b
-
 -- | Full boolean algbra has both values and variables
-class (BooleanArithmetic b, BooleanPreAlgebra b) => BooleanAlgebra b
+class BooleanArithmetic (b a) => BooleanAlgebra b a where
+    -- | Represent a variable in the target algebra
+    var :: a -> b a
+    -- evalAlg :: b Bool -> Bool
 
 {-----------------------------------------------------------------------------}
 
@@ -126,6 +123,7 @@ class InterpretBooleanArithmetic t where
     interpretArith :: forall a. BooleanArithmetic a => t -> a
 
 -- | Terms that can be interpreted as boolean algebra
-class InterpretBooleanAlgebra t where
+class InterpretBooleanAlgebra t v | t -> v
+    where 
     -- | Interpet a term @t@ in a boolean algebra.
-    interpretAlg :: forall a. BooleanAlgebra a => t -> a
+    interpretAlg :: forall a. BooleanAlgebra a v => t -> a v

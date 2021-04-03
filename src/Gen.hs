@@ -4,6 +4,8 @@ module Gen where
 
 import Prelude hiding (and, or, not, (&&), (||))
 
+import Prettyprinter
+
 import BooleanAlgebra
 
 -- import Debug.Trace
@@ -13,24 +15,24 @@ import BooleanAlgebra
 {-----------------------------------------------------------------------------}
 -- Easy examples
 
-neatExample01 :: forall b. BooleanAlgebra b => b
+neatExample01 :: forall b. BooleanArithmetic b => b
 neatExample01 = forAll [1..9] $ (`is` odd) || (`is` even)
 
-neatExample02 :: forall b. BooleanAlgebra b => b
+neatExample02 :: forall b. BooleanArithmetic b => b
 neatExample02 = exists [1..9] $ not (`is` odd)
 
-chooseInt01 :: forall b. BooleanAlgebra b => b
+chooseInt01 :: forall b. BooleanAlgebra b String => b String
 chooseInt01 = existsUnique [1..3] (\x -> var $ "N" ++ show x)
 
 -- !!! @toCNF (chooseInt02 :: BooleanExpr)@ generates 729 clauses á 7 literals
 -- (at least with the "stupid" simplifier)
-chooseInt02 :: forall b. BooleanAlgebra b => b
+chooseInt02 :: forall b. BooleanAlgebra b String => b String
 chooseInt02 = existsUnique' [1..3] (\x -> var $ "N" ++ show x)
 
-sortList :: forall b. BooleanAlgebra b => b
+sortList :: forall b. BooleanAlgebra b String => b String
 sortList = let
     -- | The n-th number is at the position i in the sorted list
-    isAt :: BooleanAlgebra b => Int -> Int -> b
+    isAt :: Int -> Int -> b String
     isAt n i = var $ "N" ++ show n ++ "P" ++ show i
 
     -- | The number i is smaller than the number j
@@ -68,10 +70,10 @@ sortList = let
 -- Pidgeonhole problem
 
 -- | Fit @n@ pidgeons into @m@ holes.
-pidgeonHole :: forall b. BooleanAlgebra b => Int -> Int -> b
+pidgeonHole :: forall b. BooleanAlgebra b String => Int -> Int -> b String
 pidgeonHole n m = let
     
-    goesIn :: Int -> Int -> b
+    goesIn :: Int -> Int -> b String
     goesIn p h = var $ "P" ++ show p ++ "H" ++ show h
     
     pidgeons :: [Int]
@@ -96,11 +98,20 @@ pidgeonHole n m = let
 
 Fit @n@ pidgeons into @n-1@ holes.
 -}
-pidgeonHole' :: forall b. BooleanAlgebra b => Int -> b
+pidgeonHole' :: forall b. BooleanAlgebra b String => Int -> b String
 pidgeonHole' n = pidgeonHole n (n-1)
 
 {-----------------------------------------------------------------------------}
 -- Sudoku
+
+-- | Sudoku cell assignment
+data SCell =
+    SCell Int Int Int
+    -- ^ @SCell x y n@ means the cell at (x,y) has number n
+    deriving (Show, Eq, Ord)
+
+instance Pretty SCell where
+    pretty = viaShow
 
 {-
 sudoku gx gy
@@ -109,7 +120,7 @@ sudoku gx gy
 TODO: Check / type
     gx > 0, gy > 0
 -}
-sudoku :: Int -> Int -> BooleanAlgebra b => b
+sudoku :: forall b. BooleanAlgebra b SCell => Int -> Int -> b SCell
 sudoku gx gy = let  --
     number = [1..gx*gy]
     xs = number
@@ -126,8 +137,8 @@ sudoku gx gy = let  --
         ]
 
     -- | Field x, y has number n
-    p :: BooleanAlgebra b => Int -> Int -> Int -> b
-    p x y n = var $ "P(" ++ show x ++ "," ++ show y ++ ")=" ++ show n
+    p :: Int -> Int -> Int -> b SCell
+    p x y n = var $ SCell x y n
 
     in -- trace ("group = " ++ show group) $
     foldr1 and

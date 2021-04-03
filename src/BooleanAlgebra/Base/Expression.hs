@@ -142,10 +142,8 @@ instance Boolean (Term BOps val var) where
 instance BooleanArithmetic (Term BOps Bool var) where
     fromBool = Val
 
-instance BooleanPreAlgebra (Term BOps val String) where
+instance BooleanAlgebra (Term BOps Bool) a where
     var = Var
-
-instance BooleanAlgebra (Term BOps Bool String)
 
 instance InterpretBooleanArithmetic (Term BOps Bool Void) where
     interpretArith (Val v)      = fromBool v
@@ -154,7 +152,7 @@ instance InterpretBooleanArithmetic (Term BOps Bool Void) where
     interpretArith (BAnd a b)   = and (interpretArith a) (interpretArith b)
     interpretArith (BOr a b)    = or (interpretArith a) (interpretArith b)
 
-instance InterpretBooleanAlgebra (Term BOps Bool String) where
+instance InterpretBooleanAlgebra (Term BOps Bool a) a where
     interpretAlg (Val v)    = fromBool v
     interpretAlg (Var v)    = var v
     interpretAlg (BNot x)   = not (interpretAlg x)

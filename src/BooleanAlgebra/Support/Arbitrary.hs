@@ -116,7 +116,7 @@ generateVarName = do
 -- generateVarName = getUnicodeString <$> arbitrary
 
 -- | Generate any instance of BooleanAlgebra
-generateBA :: forall b. BooleanAlgebra b => Gen b
+generateBA :: forall b. BooleanAlgebra b String => Gen (b String)
 generateBA = do
     n <- getSize
     -- overlapping variables aren't a problem here

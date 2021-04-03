@@ -33,7 +33,7 @@ regression01Ex = CNF $ Conjunction [
 
 regression02In :: BooleanExpr String
 regression02In = let
-    isAt :: BooleanAlgebra b => Int -> Int -> b
+    isAt :: BooleanAlgebra b String => Int -> Int -> b String
     isAt n i = var $ "N" ++ show n ++ "P" ++ show i
     in  
     L.forAll [1..3] $ \number ->

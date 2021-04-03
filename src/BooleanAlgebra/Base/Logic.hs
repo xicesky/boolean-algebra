@@ -34,6 +34,16 @@ instance Boolean b => Boolean (a -> b) where
 instance BooleanArithmetic b => BooleanArithmetic (a -> b) where
     fromBool = const . fromBool
 
+{- 
+TODO: I want this without any newtypes, sadly impossible :(
+
+type BAMeh a b v = a -> b v
+
+instance BooleanAlgebra b v => BooleanAlgebra (BAMeh a b) v where
+    var :: v -> a -> b v
+    var = const . var
+-}
+
 {- Note: there is a (co?) monad here, i can smell it, just have to find it!
 ... and probably a nice QualifiedDo for stating rules!
 -}
