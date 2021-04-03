@@ -23,9 +23,6 @@ module BooleanAlgebra.Base.Class
     ,   -- * Boolean operators
         (&&), (||)
 
-    ,   -- * Utility functions
-        truth, falsity
-
     ,   -- * Interpretable terms
         InterpretBooleanArithmetic(..)
     ,   InterpretBooleanAlgebra(..)
@@ -80,20 +77,12 @@ infixr 2 ||
 (||) :: Boolean b => b -> b -> b
 (||) = or
 
-truth :: Boolean b => b -> b
-truth x = x || not x
-
-falsity :: Boolean b =>  b -> b
-falsity x = x && not x
-
 {-----------------------------------------------------------------------------}
 
 -- | Boolean arithmetic can represent truth values
 class Boolean b => BooleanArithmetic b where
     -- | Represent a Haskell 'Bool' in the target language
     fromBool :: Bool -> b
-    default fromBool :: BooleanPreAlgebra b => Bool -> b
-    fromBool x = ifthenelse x (truth $ var "?") (falsity $ var "?")
 
     -- | Shortcut for @fromBool True@
     true :: b
