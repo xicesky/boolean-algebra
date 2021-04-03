@@ -74,8 +74,12 @@ You can also think of this as "at most one".
 
 >>> unique s $ \x -> p x
 -}
-unique :: (Eq a, BooleanAlgebra b) => [a] -> (a -> b) -> b
+unique :: (Eq a, BooleanArithmetic b) => [a] -> (a -> b) -> b
 unique s p =
+    -- TODO: We are duplicating pairs here,
+    -- this will generate @p x `excludes` p y@ as well as @p y `excludes` p x@.
+    -- Excludes is actually symmetric.
+    -- The simplifier should also catch this.
     forAll s $ \x ->        -- ∀(x ∈ s).
     forAll s $ \y ->        -- ∀(y ∈ s).
     given (x /= y) $        -- (x ≠ y) =>
@@ -91,8 +95,7 @@ You can also think of this as "exactly one".
 -}
 
 -- This variant actually generates CNF
--- TODO: Eliminate duplicate clauses (symmetry of `excludes`)
-existsUnique :: (Eq a, BooleanAlgebra b) => [a] -> (a -> b) -> b
+existsUnique :: (Eq a, BooleanArithmetic b) => [a] -> (a -> b) -> b
 existsUnique s p = exists s p && unique s p
 
 {- | Alternate formulation of 'existsUnique'.
@@ -107,7 +110,7 @@ There exists a value for which the given predicate is true.
 
 >>> existsUnique' s $ \x -> p x
 -}
-existsUnique' :: (Eq a, BooleanAlgebra b) => Boolean b => [a] -> (a -> b) -> b
+existsUnique' :: (Eq a, BooleanArithmetic b) => Boolean b => [a] -> (a -> b) -> b
 existsUnique' s p = exists s $ \x ->
     forAll s $ \y ->
     p y `iff` (x `is` (== y))

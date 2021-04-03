@@ -6,6 +6,8 @@ import Prelude hiding (and, or, not, (&&), (||))
 
 import BooleanAlgebra
 
+-- import Debug.Trace
+
 {-# ANN module "HLint: Move brackets to avoid $" #-}
 
 {-----------------------------------------------------------------------------}
@@ -98,22 +100,63 @@ pidgeonHole' :: forall b. BooleanAlgebra b => Int -> b
 pidgeonHole' n = pidgeonHole n (n-1)
 
 {-----------------------------------------------------------------------------}
--- Sudoku WIP
+-- Sudoku
 
-sudoku :: BooleanAlgebra b => b
-sudoku = let
-    ns = [1..2]
+{-
+sudoku gx gy
+(gx, gy) = (2, 3) -- 2 * 3 groups of 3 * 2 cells
 
-    -- | Field x, y has number z
-    p :: BooleanAlgebra b => Int -> Int -> Int -> b
-    p x y z = var $ "P" ++ show x ++ "_" ++ show y ++ "_" ++ show z
+TODO: Check / type
+    gx > 0, gy > 0
+-}
+sudoku :: Int -> Int -> BooleanAlgebra b => b
+sudoku gx gy = let  --
+    number = [1..gx*gy]
+    xs = number
+    ys = number
 
-    in foldr1 and
-        [   exists ns $ forAll [3..4] $ p 0 -- forAll ns $ exists ns $ p 0
+    group = 
+        [
+            [ (x + 1, y + 1)
+            | x <- (xg +) <$> [0..gy-1]
+            , y <- (yg +) <$> [0..gx-1]
+            ]
+        | xg <- (gy *) <$> [0..gx-1]
+        , yg <- (gx *) <$> [0..gy-1]
         ]
 
-{- Idea: Encode the pidgeonhole problem!
--}
+    -- | Field x, y has number n
+    p :: BooleanAlgebra b => Int -> Int -> Int -> b
+    p x y n = var $ "P(" ++ show x ++ "," ++ show y ++ ")=" ++ show n
+
+    in -- trace ("group = " ++ show group) $
+    foldr1 and
+        [   -- For each cell there is a unique number.
+            forAll xs $ \x ->
+            forAll ys $ \y ->
+            existsUnique number $ \n ->
+            p x y n
+        ,   -- For each number, there is a unique cell in ...
+            -- ... each column
+            forAll number $ \n ->
+            (   forAll xs $ \x ->
+                existsUnique ys $ \y ->
+                p x y n
+            )
+        ,   -- ... each row
+            forAll number $ \n ->
+            (   forAll ys $ \y ->
+                existsUnique xs $ \x ->
+                p x y n
+            )
+        ,   -- ... each group
+            forAll number $ \n ->
+            (   forAll group $ \coordInGroup ->
+                existsUnique coordInGroup $ \(x,y) ->
+                p x y n
+            )
+
+        ]
 
 {- Idea: Encode "Who owns the zebra":
 https://drive.google.com/file/d/1WRUQSKIHKLpEv3_OlcB6P4Z8G2-sismi/view
@@ -130,4 +173,17 @@ interesting:
     - Learned clauses
     - Implication graph...
     - Implications that lead to each fact
+-}
+
+{- List of problems that i'd like to check for "efficient" encodings:
+
+https://en.wikipedia.org/wiki/Hamiltonian_path
+And in a grid: https://dspace.library.uu.nl/handle/1874/383821
+    https://www.researchgate.net/publication/220616693_Hamilton_Paths_in_Grid_Graphs
+https://en.wikipedia.org/wiki/Numberlink
+Completing latin squares:
+https://en.wikipedia.org/wiki/Latin_square#Mathematical_puzzles
+https://en.wikipedia.org/wiki/KenKen
+    https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/keen.html
+https://www.chiark.greenend.org.uk/~sgtatham/puzzles/js/loopy.html
 -}
