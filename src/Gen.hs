@@ -102,6 +102,36 @@ pidgeonHole' :: forall b. BooleanAlgebra b String => Int -> b String
 pidgeonHole' n = pidgeonHole n (n-1)
 
 {-----------------------------------------------------------------------------}
+
+latinSquare :: forall b. BooleanAlgebra b String => Int -> b String
+latinSquare n = let
+    numbers = [1..n]
+    rows = [1..n]
+    cols = [1..n]
+
+    -- Enc. Property: Field x, y has number n
+    p :: BooleanAlgebra b String => Int -> Int -> Int -> b String
+    p x y n = var $ "P(" ++ show x ++ "," ++ show y ++ ")=" ++ show n
+
+    in  foldr1 and
+        [   -- Unique1: Cell -> Number
+            forAll cols $ \x ->
+            forAll rows $ \y ->
+            existsUnique numbers $ \n ->
+            p x y n
+        ,   -- Unique1: Number -> Pos in Row
+            forAll numbers $ \n ->
+            forAll rows $ \y ->
+            existsUnique cols $ \x ->
+            p x y n
+        ,   -- Unique1: Number -> Pos in Col
+            forAll numbers $ \n ->
+            forAll cols $ \x ->
+            existsUnique rows $ \y ->
+            p x y n
+        ]
+
+{-----------------------------------------------------------------------------}
 -- Sudoku
 
 -- | Sudoku cell assignment

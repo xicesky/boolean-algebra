@@ -33,6 +33,7 @@ library
       BooleanAlgebra.Examples
       BooleanAlgebra.Format.Dimacs
       BooleanAlgebra.Ideas
+      BooleanAlgebra.Problem.Demo
       BooleanAlgebra.Problem.Encoding
       BooleanAlgebra.Solver.Basic
       BooleanAlgebra.Solver.Class

@@ -1,41 +1,228 @@
 
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module BooleanAlgebra.Problem.Encoding where
 
 import Prelude hiding (all, and, or, not, (&&), (||))
 
 import Data.Maybe (catMaybes)
+import Data.Foldable (foldl')
 import Data.Functor.Identity
+import Control.Monad.State.Strict
 
 -- containers
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
-import BooleanAlgebra.Base.Class
-import BooleanAlgebra.Base.Logic
+-- optics
+import Optics hiding (assign)
+--import Optics.TH (makeFieldLabelsNoPrefix)  -- req optics-0.4
+import Optics.TH (makeFieldLabelsWith, noPrefixFieldLabels)
+import Optics.State (modifying, use)
+import Data.Map.Optics
+import qualified Optics.State as ST
 
--- FIXME just for experiments, remove
-import BooleanAlgebra
-import Gen
-import Text.Pretty.Simple
-import Data.Foldable hiding (all, any, and, or)
-import Data.List hiding (all, any, and, or)
+import BooleanAlgebra.Base.Class
+import BooleanAlgebra.Base.Expression
+import BooleanAlgebra.Base.Logic
+import BooleanAlgebra.Transform.CNF
+import BooleanAlgebra.Solver.Class
+import BooleanAlgebra.Solver.Basic
+
+{-----------------------------------------------------------------------------}
+-- Notes
+
+{-
+I think we are mixing possibly separate problems here:
+
+- Variable domains
+    The variable domains are required during encoding and decoding.
+    Since the domain is fixed per variable, it should probably be
+    part of it.
+    The encoder / decoder needs to be able cast heterogenous types
+    in a generic way, whereas user code can keep the actual type
+    information. This means we likely need dynamic types a la
+    'Data.Typeable' or 'Data.Dynamic'
+
+- Encoding type
+    Variable "choice" is just one specific possible encoding (although
+    a very general one). We might want to encode other structures, for
+    example bitvectors with addition and equality or sets directly
+    as booleans.
+    Since the chosen encoding is important for decoding, the encoding
+    also needs to be part of a variable. The supported operations
+    on variables also depend on a specific encoding.
+
+- Encoding a representation for variables
+    This is useful for debugging and visualizing, but not really
+    neccessary. Variables can just be identified by an Int.
+    Additionally, a monad for creating new variables might help.
+
+- Problem structure
+    For some problems, e.g. latin squares, there is a regular structure
+    on a set of variables. We'd like to encode the whole structure, decoding
+    it when the problem is solved, or even during solving for visualization
+    (this requires the visualizer to understand the variable encoding, i.e.
+    "sets" of possible values for choice variables, lists of "Maybe Bool"
+    for bitvectors ...).
+    We should be able to support such a structure using standard Haskell
+    techniques (esp. Functor / Traversable).
+-}
+
+-- Variable name
+type VarName = String
+-- type Domain a = (Show a, Ord a)
+
+data VarProps where
+    EncodeSet :: [Int] -> VarProps
+    deriving (Show, Eq, Ord)
+
+data EncodeState = EncodeState
+    {   esNextIndex :: Int
+    ,   esVarProps :: Map Int VarProps
+    ,   esNameMap :: Map VarName Int
+    ,   esConstraints :: [BooleanExpr String]
+    }
+    deriving (Show, Eq)
+
+-- haskell-language-server crashes
+-- makeFieldLabelsWith noPrefixFieldLabels ''EncodeState
+-- on this, too. issue probably: https://github.com/haskell/haskell-language-server/issues/1297
+--makeLenses ''EncodeState
+
+initEncodeState :: EncodeState
+initEncodeState = EncodeState 0 mempty mempty []
+
+{-----------------------------------------------------------------------------}
+-- Manual splices
+
+-- TODO Remove this section and use makeFieldLabelsWith when
+-- haskell-language-server can handle template haskell without crashing.
+
+-- makeFieldLabelsWith noPrefixFieldLabels ''EncodeState
+-- ======>
+instance (k_as5N ~ A_Lens,
+            a_as5O ~ [BooleanExpr String],
+            b_as5P ~ [BooleanExpr String]) =>
+            LabelOptic "esConstraints" k_as5N EncodeState EncodeState a_as5O b_as5P where
+    {-# INLINE labelOptic #-}
+    labelOptic
+        = lensVL
+            (\ f_as5Q s_as5R
+                -> case s_as5R of {
+                    EncodeState x1_as5S x2_as5T x3_as5U x4_as5V
+                        -> (fmap
+                            (\ y_as5W -> (((EncodeState x1_as5S) x2_as5T) x3_as5U) y_as5W))
+                            (f_as5Q x4_as5V) })
+instance (k_as5X ~ A_Lens,
+            a_as5Y ~ Map VarName Int,
+            b_as5Z ~ Map VarName Int) =>
+            LabelOptic "esNameMap" k_as5X EncodeState EncodeState a_as5Y b_as5Z where
+    {-# INLINE labelOptic #-}
+    labelOptic
+        = lensVL
+            (\ f_as60 s_as61
+                -> case s_as61 of {
+                    EncodeState x1_as62 x2_as63 x3_as64 x4_as65
+                        -> (fmap
+                            (\ y_as66 -> (((EncodeState x1_as62) x2_as63) y_as66) x4_as65))
+                            (f_as60 x3_as64) })
+instance (k_as67 ~ A_Lens, a_as68 ~ Int, b_as69 ~ Int) =>
+            LabelOptic "esNextIndex" k_as67 EncodeState EncodeState a_as68 b_as69 where
+    {-# INLINE labelOptic #-}
+    labelOptic
+        = lensVL
+            (\ f_as6a s_as6b
+                -> case s_as6b of {
+                    EncodeState x1_as6c x2_as6d x3_as6e x4_as6f
+                        -> (fmap
+                            (\ y_as6g -> (((EncodeState y_as6g) x2_as6d) x3_as6e) x4_as6f))
+                            (f_as6a x1_as6c) })
+instance (k_as6h ~ A_Lens,
+            a_as6i ~ Map Int VarProps,
+            b_as6j ~ Map Int VarProps) =>
+            LabelOptic "esVarProps" k_as6h EncodeState EncodeState a_as6i b_as6j where
+    {-# INLINE labelOptic #-}
+    labelOptic
+        = lensVL
+            (\ f_as6k s_as6l
+                -> case s_as6l of {
+                    EncodeState x1_as6m x2_as6n x3_as6o x4_as6p
+                        -> (fmap
+                            (\ y_as6q -> (((EncodeState x1_as6m) y_as6q) x3_as6o) x4_as6p))
+                            (f_as6k x2_as6n) })
 
 {-----------------------------------------------------------------------------}
 
-encodeVar :: String -> String
-encodeVar = show
+newtype EVar a = EVar Int
 
-varEquals :: Show a => String -> a -> String
-varEquals v x = "P(" ++ encodeVar v ++ " == " ++ show x ++ ")"
+type EnS = StateT EncodeState Identity
+newtype EncodeM a = EncodeM { toStateT :: EnS a }
+    deriving (Functor, Applicative, Monad)
 
+-- internal
+liftEncode :: (a -> EnS b) -> a -> EncodeM b
+liftEncode f x = EncodeM $ f x
+
+-- internal
+esIncIndex :: EnS Int
+esIncIndex = do
+    i <- use #esNextIndex
+    modifying #esNextIndex (+1)
+    return i
+
+-- internal
+autoName :: String -> EnS (Int, String)
+autoName nx = let
+    check name err = use (#esNameMap % at name) >>= \case
+        Just _  -> err
+        Nothing -> return ()
+    in case nx of
+    "" -> do
+        i <- esIncIndex
+        let name = show i
+        check name $ error "EncodeM interal error"
+        return (i, name)
+    name -> do
+        i <- esIncIndex
+        check name $ error $ "Variable " ++ show name ++ " is already defined!"
+        return (i, name)
+
+newChoiceVar :: String -> [Int] -> EncodeM (EVar Int)
+newChoiceVar namex dom = EncodeM $ do
+    (i, name) <- autoName namex
+    modifying #esVarProps $ Map.insert i (EncodeSet dom)
+    modifying #esConstraints $ (choose name dom :)
+    modifying #esNameMap $ Map.insert name i
+    return $ EVar i
+
+runEncodeM :: EncodeM a -> (a, EncodeState)
+runEncodeM m = runIdentity $ runStateT (toStateT m) initEncodeState
+
+{-----------------------------------------------------------------------------}
+-- Encoding variable assignments
+
+encodeAssign :: Show a => String -> a -> String
+encodeAssign v x = v ++ "=" ++ show x
+
+assign :: BooleanAlgebra b String => VarName -> Int -> b String
+assign v x = var $ encodeAssign v x
+
+{-----------------------------------------------------------------------------}
+
+-- Encode domain
 choose :: BooleanAlgebra b String => String -> [Int] -> b String
-choose v set = existsUnique set $ \x -> var $ varEquals v x
+choose v set = existsUnique set $ \x -> assign v x
 
+-- Decode result
 decodeChoose :: String -> [Int] -> Map String Bool -> Int
 decodeChoose v set r = let
     findResult :: Int -> Maybe Int
     findResult x = let
-        name = varEquals v x
+        name = encodeAssign v x
         in case Map.lookup name r of
             Nothing     -> error $ "Missing result variable: " ++ show name
             Just False  -> Nothing
@@ -47,141 +234,22 @@ decodeChoose v set r = let
         xs      -> error $ "Ambiguous assignments: " ++ show v ++ " = " ++ show xs
 
 {-----------------------------------------------------------------------------}
--- test
-
--- chooseInt01 :: forall b. BooleanAlgebra b => b
--- chooseInt01 = existsUnique [1..3] (\x -> var $ "N" ++ show x)
-
-testChooseInt01 :: Int
-testChooseInt01 = let
-    problem :: BooleanExpr String
-    problem = choose "x" [1..9]
-    in decodeChoose "x" [1..9] (simpleSolve problem)
-
-{-----------------------------------------------------------------------------}
--- Matrix structure problems
-
-type Matrix a = [[a]]
-
--- rows . rows = id
-rows :: Matrix a -> [[a]]
-rows = id
-
--- cols . cols = id
-cols :: Matrix a -> [[a]]
-cols = transpose
-
--- Boxes as in Sudoku
--- boxes n . boxes n = id
-boxes :: Int -> Matrix a -> [[a]]
-boxes n = unpack . map transpose . pack where
-    pack :: [[a]] -> [[[[a]]]]
-    pack = chop n . map (chop n)
-    unpack :: [[[[a]]]] -> [[a]]
-    unpack = map concat . concat
-
-chop :: Int -> [a] -> [[a]]
-chop _ [] = []
-chop n xs = ys : chop n zs where
-    (ys, zs) = splitAt n xs
-
-type Var = String
 
 all :: (BooleanArithmetic b, Foldable t) => t a -> (a -> b) -> b
 all t f = foldl' (\l r -> l `and` f r) true t
 
-assign :: BooleanAlgebra b String => Var -> Int -> b String
-assign v x = var $ v ++ "=" ++ show x
-
-neq :: BooleanAlgebra b String => [Int] -> Var -> Var -> b String
+neq :: BooleanAlgebra b String => [Int] -> VarName -> VarName -> b String
 neq dom v1 v2 =     -- Check domains are actually equal!
     forAll dom $ \x ->
     assign v1 x `excludes` assign v2 x
 
 -- Basically the same as unique
-allDifferent :: (BooleanAlgebra b String, Foldable t) => [Int] -> t Var -> b String
+allDifferent :: (BooleanAlgebra b String, Foldable t) => [Int] -> t VarName -> b String
 allDifferent dom t =
     all t $ \v1 ->
     all t $ \v2 ->  -- TODO: Only need ordered pairs
     given (v1 /= v2) $
     neq dom v1 v2
-
--- Latin square
-lasqProb :: Int -> BooleanExpr String
-lasqProb n = let
-
-    -- 1. "Giving names" to variables in our structure    
-    ivar :: Int -> Int -> Var
-    ivar x y = "f(" ++ show x ++ "," ++ show y ++ ")"
-    
-    structure :: Matrix Var
-    structure = 
-        [   [ ivar x y | x <- [1..n] ]  -- single row
-        | y <- [1..n]
-        ]
-
-    -- 2. Assigning the domain of variables
-    vardom = [1..n]
-
-    dom :: BooleanAlgebra b String => b String
-    dom =
-        all structure $ \row ->
-        all row $ \cell ->
-        existsUnique vardom $ \v ->
-        assign cell v
-
-    -- 3. Formulating rules
-    ruleRows :: BooleanAlgebra b String => b String
-    ruleRows =
-        all (rows structure) $ \row ->
-        allDifferent vardom row
-
-    ruleCols :: BooleanAlgebra b String => b String
-    ruleCols =
-        all (cols structure) $ \col ->
-        allDifferent vardom col
-
-    prob :: BooleanExpr String
-    prob = dom && ruleRows && ruleCols
-
-    in prob
-
-latinSquare :: Int -> IO () -- [[Int]]
-latinSquare n = let
-    problem :: BooleanExpr String
-    problem = let
-        numbers = [1..n]
-        rows = [1..n]
-        cols = [1..n]
-
-        -- Enc. Property: Field x, y has number n
-        p :: BooleanAlgebra b String => Int -> Int -> Int -> b String
-        p x y n = var $ "P(" ++ show x ++ "," ++ show y ++ ")=" ++ show n
-
-        in  foldr1 and
-            [   -- Unique1: Cell -> Number
-                forAll cols $ \x ->
-                forAll rows $ \y ->
-                existsUnique numbers $ \n ->
-                p x y n
-            ,   -- Unique1: Number -> Pos in Row
-                forAll numbers $ \n ->
-                forAll rows $ \y ->
-                existsUnique cols $ \x ->
-                p x y n
-            ,   -- Unique1: Number -> Pos in Col
-                forAll numbers $ \n ->
-                forAll cols $ \x ->
-                existsUnique rows $ \y ->
-                p x y n
-            ]
-    in print $ pretty $ solveAssignment problem
-
-solveSudoku :: IO ()
-solveSudoku = let
-    problem :: BooleanExpr SCell
-    problem = sudoku 2 2
-    in print $ pretty $ solveAssignment problem
 
 {-----------------------------------------------------------------------------}
 
@@ -200,16 +268,3 @@ simpleSolve problem = let
 solveAssignment :: (Show a, Ord a) => BooleanExpr a -> [a]
 solveAssignment problem = fmap fst $ filter snd $ Map.toList $ simpleSolve problem
 
-{-
-Interactive:
-
--- Choosing a single variable (really hard)
-testChooseInt01
-
--- 3x3 Latin square
-print $ pretty $ solveAssignment $ lasqProb 3
-
--- 4x4 sudoku
-solveSudoku
-
--}

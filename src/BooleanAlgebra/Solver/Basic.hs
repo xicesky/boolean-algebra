@@ -74,6 +74,12 @@ data SATState = SATState
 --makeFieldLabelsWith noPrefixFieldLabels ''SATState
 --makeFieldLabelsNoPrefix ''SATState
 
+{-----------------------------------------------------------------------------}
+-- Manual splices
+
+-- TODO Remove this section and use makeFieldLabelsWith when
+-- haskell-language-server can handle template haskell without crashing.
+
 instance (k_amVd ~ Optics.Internal.Optic.Types.A_Lens,
           a_amVe ~ Map Int Bool,
           b_amVf ~ Map Int Bool) =>
@@ -98,6 +104,8 @@ instance (k_amVl ~ Optics.Internal.Optic.Types.A_Lens,
                 SATState x1_amVq x2_amVr
                   -> (fmap (\ y_amVs -> (SATState y_amVs) x2_amVr))
                        (f_amVo x1_amVq) })
+
+{-----------------------------------------------------------------------------}
 
 initState :: [Disjunction (Literal Int)] -> SATState
 initState cs = SATState cs mempty
