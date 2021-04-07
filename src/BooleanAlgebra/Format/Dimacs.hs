@@ -68,10 +68,10 @@ With comments for variables names
 -}
 toDimacsVars :: forall text. Textual text => CNF String -> text
 toDimacsVars cnf = let
-    Context (iton, ntoi) cnfi = buildContext cnf
+    (iton, cnfi) = slurpNames cnf
     showEntry :: Int -> String -> text
     showEntry i name = dimacsComment $ "    " ++ show i ++ " -> " ++ show name
-    in  dimacsComment "Variable map:"
+    in dimacsComment "Variable map:"
     <>  Map.foldMapWithKey showEntry iton
     <>  toDimacs cnfi
 

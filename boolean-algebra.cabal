@@ -45,16 +45,17 @@ library
       BooleanAlgebra.Transform.Variable
       Gen
       Interactive
+      Missing.Bimap
       Missing.IO
       Missing.Misc
+      Missing.Monad.NamingT
+      Missing.Optics
       Missing.Textual
       Missing.Void
       Term.Inject
       Term.Prettyprinter
       Term.Substitution
       Term.Term
-      Term.Variable.Context
-      Term.Variable.FreshT
       Term.Variable.Names
   other-modules:
       Paths_boolean_algebra

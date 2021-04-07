@@ -14,8 +14,7 @@ module BooleanAlgebra.Solver.Class
     ,   solve'
 
     ,   -- * Utilities
-        ProperName
-    ,   SatT
+        SatT
     ,   mapResultNames
 
     ,   -- * Re-exports
@@ -36,19 +35,14 @@ import qualified Data.Map.Strict as Map
 import Control.Monad.Error.Class
 import Control.Monad.Except
 
+import Missing.Monad.NamingT
+import qualified Missing.Bimap as Bimap
+
 import BooleanAlgebra.Base.Class
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Transform.Variable
 
 {-----------------------------------------------------------------------------}
-
--- TODO should probably be in Base.Expression
--- | Proper variable names for use in sat solving
-class (Show name, Ord name, Typeable name) => ProperName name where
-    {-# MINIMAL #-}
-
-instance ProperName String
-instance ProperName Int
 
 -- | Result of successfully running a sat solver.
 data SatResult name
@@ -98,17 +92,14 @@ class Monad m => Solver s m where
     solveInt ::
         s -> Int -> CNF Int -> SatT a m (SatResult Int)
 
-    solve :: Ord name =>
+    solve :: (Show name, Monoid name, Ord name) =>
         s -> CNF name -> SatT name m (SatResult name)
-    solve s cnf = let
-        Context (iton, ntoi) cnfi = buildContext cnf
-        in do
-            result <- solveInt s (maxVarNum iton) cnfi
-            mapResultNames ntoi result
-
--- FIXME: This should be made easier by using Context, not harder
-maxVarNum :: Map Int name -> Int
-maxVarNum map = maximum $ 0 : Map.keys map
+    solve s cnf = unsafeRunNamingT $ do
+        cnfi <- traverse autoMapName cnf
+        maxVar <- peekIndex
+        result <- lift $ solveInt s maxVar cnfi
+        ntoi <- Bimap.toMapR <$> getNameMap
+        lift $ mapResultNames ntoi result
 
 {- | Map the model given by a sat solver back to named variables.
 

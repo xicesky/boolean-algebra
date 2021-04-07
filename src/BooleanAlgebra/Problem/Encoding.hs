@@ -254,7 +254,7 @@ allDifferent dom t =
 {-----------------------------------------------------------------------------}
 
 -- | Solve or throw an error
-simpleSolve :: forall a. (Show a, Ord a) => BooleanExpr a -> Map a Bool
+simpleSolve :: forall a. (Show a, Ord a, Monoid a) => BooleanExpr a -> Map a Bool
 simpleSolve problem = let
     solution :: Either (SatError a) (SatResult a)
     solution = runIdentity $ runSatT (return . Left) $
@@ -265,6 +265,5 @@ simpleSolve problem = let
         Right (Sat result)  -> result
 
 -- | Solve assignment problem
-solveAssignment :: (Show a, Ord a) => BooleanExpr a -> [a]
+solveAssignment :: (Show a, Ord a, Monoid a) => BooleanExpr a -> [a]
 solveAssignment problem = fmap fst $ filter snd $ Map.toList $ simpleSolve problem
-

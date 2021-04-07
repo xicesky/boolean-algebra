@@ -127,18 +127,18 @@ cnf_iff_or z a b = CNF $ Conjunction
 cnf_all :: [CNF a] -> CNF a
 cnf_all = CNF . joinConjunction . Conjunction . fmap unCNF
 
-tseitinTransformM :: forall m. Monad m => Term BOps Void Int -> FreshT m (CNF Int)
+tseitinTransformM :: forall m. Monad m => Term BOps Void Int -> NamingT String m (CNF Int)
 tseitinTransformM term = do
     (zTerm, cnf) <- cata tt term
     return $ cnf_all [cnf, cnf_just zTerm]
     where
-    tt :: Alg (TermF BOps Void Int) (FreshT m (Literal Int, CNF Int))
+    tt :: Alg (TermF BOps Void Int) (NamingT String m (Literal Int, CNF Int))
     tt t = sequenceA t >>= \case
         ConstT v    -> absurd v
         VariableT v -> return ((True, v), CNF $ Conjunction [])
         RecT (UnaryOp BooleanNot (v, cnf)) -> return (not v, cnf)
         RecT (BinaryOp BooleanAnd (va, cnfa) (vb, cnfb)) ->
-            freshName "zA_" >>= \z -> let
+            newNamedWithPrefix "zA_" >>= \z -> let
             t' = cnf_all
                 [   cnfa
                 ,   cnfb
@@ -146,7 +146,7 @@ tseitinTransformM term = do
                 ]
             in return ((True, z), t')
         RecT (BinaryOp BooleanOr (va, cnfa) (vb, cnfb)) ->
-            freshName "zO_" >>= \z -> let
+            newNamedWithPrefix "zO_" >>= \z -> let
             t' = cnf_all
                 [   cnfa
                 ,   cnfb
@@ -157,12 +157,7 @@ tseitinTransformM term = do
 
 -- tseitinTransform' :: Term BOps Bool a -> Either Bool (Term BOps Void a)
 tseitinTransform' :: Term BOps Void String -> CNF String
-tseitinTransform' t = let
-    (Context nmap iterm) = buildContext t
-    result :: (CNF Int, MappedNames String)
-    result = runIdentity $ runFreshT (tseitinTransformM iterm) nmap
-    (cnf, (iton, _)) = result
-    in fmap (iton Map.!) cnf
+tseitinTransform' = liftNames tseitinTransformM
 
 {- | Transformation to CNF
 

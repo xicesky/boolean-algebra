@@ -10,23 +10,20 @@ module BooleanAlgebra.Transform.Variable
         HasNames(..)
     ,   maximumVarNum
 
-    ,   -- * Name maps
-        MappedNames(..)
-    ,   Context(..)
-    ,   getNameMap
-    ,   getIndexMap
-    ,   buildContext
-    ,   destroyContext
-
     ,   -- * Creating fresh names
-        findFreshName
-    ,   FreshState
-    ,   MonadFresh(..)
-    ,   FreshT
-    ,   runFreshT
+        NamingT(..)
+    ,   MonadName(..)
+    ,   runNamingT
+    ,   runNamingTString
+    ,   liftNames
+    ,   liftNamesM
+    ,   slurpNames
+
     ) where
 
 import Data.Kind (Type)
+import Data.Traversable
+import Data.Functor.Identity
 
 -- containers
 import Data.Map.Strict (Map)
@@ -34,9 +31,9 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import qualified Missing.Bimap as Bimap
+import Missing.Monad.NamingT
 import Term.Variable.Names
-import Term.Variable.Context
-import Term.Variable.FreshT
 import BooleanAlgebra.Base.Expression
 
 {-----------------------------------------------------------------------------}

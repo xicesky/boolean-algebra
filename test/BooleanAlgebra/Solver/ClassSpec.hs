@@ -3,9 +3,9 @@
 
 module BooleanAlgebra.Solver.ClassSpec where
 
-import Control.Exception (throwIO)
-
 import Prelude hiding (and, or, not, (&&), (||))
+import Data.Typeable (Typeable)
+import Control.Exception (throwIO)
 
 -- hspec & quickcheck
 import Test.Hspec
@@ -36,8 +36,17 @@ instance Arbitrary VerySmallNat where
 
 {-----------------------------------------------------------------------------}
 
+-- TODO should probably be in Base.Expression
+-- FIXME: That's not a "Name" because it must work for Int, too
+-- | Proper variable names for use in sat solving
+class (Show name, Ord name, Typeable name) => ProperName name where
+    {-# MINIMAL #-}
+
+instance ProperName String
+instance ProperName Int
+
 -- | Run the solver, throwing errors in IO
-runSolver :: forall name s. (ProperName name, Solver s IO) =>
+runSolver :: forall name s. (ProperName name, Monoid name, Solver s IO) =>
     s -> CNF name -> PropertyM IO (SatResult name)
 runSolver s cnf = run $ runSatT handleError $ solve s cnf where
     handleError :: SatError name -> IO a
@@ -83,7 +92,7 @@ minisatFail = Var "" `BAnd` Var ""
 
 cnfInt :: CNF String -> CNF Int
 cnfInt cnf = let
-    Context _ cnfi = buildContext cnf
+    (_, cnfi) = slurpNames cnf
     in cnfi
 
 dimacs :: CNF String -> IO ()
