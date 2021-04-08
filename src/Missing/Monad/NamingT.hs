@@ -111,6 +111,17 @@ deriving instance MonadTrans (NamingT n)
 deriving instance MonadIO m => MonadIO (NamingT n m)
 -- ... and so on... implement as we need it
 
+instance Show n => Show (NamingTState n) where
+    showsPrec d (NamingTState nextIndex prefix names scheme)
+        = showParen (d >= 11) $ showString "NamingTState {"
+        . showString "nsNextIndex = "
+        . shows nextIndex
+        . showString ", nsPrefix = "
+        . shows prefix
+        . showString ", nsNames = "
+        . shows names
+        . showString ", nsScheme = <?> }"
+
 -- makeFieldLabelsWith noPrefixFieldLabels ''NamingTState
 
 {-----------------------------------------------------------------------------}
