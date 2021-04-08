@@ -5,7 +5,15 @@ module BooleanAlgebra.Solver.ClassSpec where
 
 import Prelude hiding (and, or, not, (&&), (||))
 import Data.Typeable (Typeable)
+import Data.Functor.Identity
 import Control.Exception (throwIO)
+import Control.Monad (when)
+
+-- containers
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 
 -- hspec & quickcheck
 import Test.Hspec
@@ -24,6 +32,7 @@ import Gen (pidgeonHole')
 import Debug.Trace
 
 {-# ANN module "HLint: ignore Redundant $" #-}
+{-# ANN module "HLint: ignore Use camelCase" #-}
 
 {-----------------------------------------------------------------------------}
 
@@ -35,8 +44,8 @@ instance Arbitrary VerySmallNat where
     arbitrary = chooseEnum (1, 5)
 
 {-----------------------------------------------------------------------------}
+-- Utilities
 
--- TODO should probably be in Base.Expression
 -- FIXME: That's not a "Name" because it must work for Int, too
 -- | Proper variable names for use in sat solving
 class (Show name, Ord name, Typeable name) => ProperName name where
@@ -51,6 +60,17 @@ runSolver :: forall name s. (ProperName name, Monoid name, Solver s IO) =>
 runSolver s cnf = run $ runSatT handleError $ solve s cnf where
     handleError :: SatError name -> IO a
     handleError = throwIO
+
+-- | Check whether the given 'SatResult' is 'Sat' without checking the model.
+isSat :: SatResult name -> Bool
+isSat (Sat _)   = True
+isSat _         = False
+
+qcError :: String -> Property
+qcError s = counterexample s $ property False
+
+{-----------------------------------------------------------------------------}
+-- Tests for 'solve' via runSolver
 
 -- | For a given problem, toCNF and toCNF2 are equally solvable
 prop_solves_CNF :: Solver s IO => s -> Int -> BooleanExpr String -> Property
@@ -70,6 +90,53 @@ prop_detects_unsat s timeLimit (VerySmallNat probSize) = (probSize > 0) ==>
         -- We are using 'toCNF' here, because it's already in CNF
         result <- runSolver s $ toCNF $ (pidgeonHole' probSize :: BooleanExpr String)
         assert (result == Unsat)
+
+spec_BasicSolver :: Spec
+spec_BasicSolver = describe "BasicSolver" $ do
+    prop "solves CNF" $ mapSize (`div` 8) $ -- yes, div 8. This solver is slow.
+        prop_solves_CNF BasicSolver 100000
+    prop "detects UNSAT" $
+        prop_detects_unsat BasicSolver 100000
+
+spec_Minisat :: Spec
+spec_Minisat = describe "Minisat" $ do
+    prop "solves CNF" $ mapSize (`div` 4) $ -- div 4 because to toCNF
+        prop_solves_CNF (Minisat "minisat") 500000
+    prop "detects UNSAT" $
+        prop_detects_unsat BasicSolver 500000
+
+{-----------------------------------------------------------------------------}
+-- Tests for liftSolve
+
+{-
+liftSolve :: (Monad m, Show name, Monoid name, Ord name) =>
+    (forall a. Int -> CNF Int -> SatT a m (SatResult Int))
+    -> CNF name -> SatT name m (SatResult name)
+-}
+
+subject_solve :: forall a m. Monad m => Int -> CNF Int -> SatT a m (SatResult Int)
+subject_solve maxInt cnf = do
+    -- FIXME
+    when (0 `Set.member` variableNames cnf) $
+        throwError $ ExternalSolverError $ "liftSolve: found 0"
+    return $ Sat $ Map.fromList [(v, True) | v <- [0..maxInt]]
+
+prop_liftSolve_generates_pos :: BooleanExpr String -> Property
+prop_liftSolve_generates_pos expr = let
+    cnf :: CNF String
+    cnf = toCNF2 expr
+    handleError :: Show name => SatError name -> Identity Property
+    handleError (ExternalSolverError e) = return $ qcError $ show e
+    handleError e                       = error $ show e
+    in runIdentity $ runSatT handleError $ do
+        result <- liftSolve subject_solve cnf
+        return $ property $ isSat result
+
+spec_liftSolve :: Spec
+spec_liftSolve = describe "liftSolve" $ do
+    prop "generates only positive indices" $
+        -- within 10000 $ withMaxSuccess 1000 $
+        prop_liftSolve_generates_pos
 
 {-----------------------------------------------------------------------------}
 -- For interactive use only
@@ -92,7 +159,7 @@ minisatFail = Var "" `BAnd` Var ""
 
 cnfInt :: CNF String -> CNF Int
 cnfInt cnf = let
-    (_, cnfi) = slurpNames cnf
+    (_, cnfi) = slurpNames 1 cnf
     in cnfi
 
 dimacs :: CNF String -> IO ()
@@ -114,21 +181,8 @@ quickSolve = solve' BasicSolver . toCNF
 {-----------------------------------------------------------------------------}
 -- HSpec
 
-spec_BasicSolver :: Spec
-spec_BasicSolver = describe "BasicSolver" $ do
-    prop "solves CNF" $ mapSize (`div` 8) $ -- yes, div 8. This solver is slow.
-        prop_solves_CNF BasicSolver 100000
-    prop "detects UNSAT" $
-        prop_detects_unsat BasicSolver 100000
-
-spec_Minisat :: Spec
-spec_Minisat = describe "Minisat" $ do
-    prop "solves CNF" $ mapSize (`div` 4) $ -- div 4 because to toCNF
-        prop_solves_CNF (Minisat "minisat") 500000
-    prop "detects UNSAT" $
-        prop_detects_unsat BasicSolver 500000
-
 spec :: Spec
 spec = do
+    spec_liftSolve
     spec_BasicSolver
     spec_Minisat

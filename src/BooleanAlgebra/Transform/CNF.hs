@@ -157,7 +157,7 @@ tseitinTransformM term = do
 
 -- tseitinTransform' :: Term BOps Bool a -> Either Bool (Term BOps Void a)
 tseitinTransform' :: Term BOps Void String -> CNF String
-tseitinTransform' = liftNames tseitinTransformM
+tseitinTransform' = liftNames 1 tseitinTransformM
 
 {- | Transformation to CNF
 

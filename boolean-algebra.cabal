@@ -133,6 +133,7 @@ test-suite boolean-algebra-test
       BooleanAlgebra.Solver.ClassSpec
       BooleanAlgebra.Transform.CNFSpec
       BooleanAlgebra.Transform.VariableSpec
+      Missing.Monad.NamingTSpec
       Paths_boolean_algebra
   hs-source-dirs:
       test

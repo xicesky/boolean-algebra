@@ -68,7 +68,7 @@ With comments for variables names
 -}
 toDimacsVars :: forall text. Textual text => CNF String -> text
 toDimacsVars cnf = let
-    (iton, cnfi) = slurpNames cnf
+    (iton, cnfi) = slurpNames 1 cnf
     showEntry :: Int -> String -> text
     showEntry i name = dimacsComment $ "    " ++ show i ++ " -> " ++ show name
     in dimacsComment "Variable map:"

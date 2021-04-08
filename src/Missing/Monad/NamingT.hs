@@ -203,14 +203,14 @@ instance (Monad m, Show n, Monoid n, Ord n) => MonadName n (NamingT n m) where
 
 -- | Run the 'NamingT' monad transformer.
 runNamingT :: forall m n a. (Monad m, Show n, Monoid n, Ord n) =>
-    NamingFun n -> NamingT n m a -> m a
-runNamingT nfun namet = do
+    Int -> NamingFun n -> NamingT n m a -> m a
+runNamingT initialIndex nfun namet = do
     (a, _) <- runStateT (toStateT namet) initNamingTState
     return a
     where
         initNamingTState :: NamingTState n
         initNamingTState = NamingTState
-            {   nsNextIndex = 0
+            {   nsNextIndex = initialIndex
             ,   nsPrefix = mempty
             ,   nsNames = Bimap.empty
             ,   nsScheme = nfun
@@ -221,14 +221,15 @@ to create new names.
 
 Trying to create a name will result in an /'error'/.
 -}
-unsafeRunNamingT :: (Monad m, Show n, Monoid n, Ord n) => NamingT n m a -> m a
-unsafeRunNamingT = runNamingT
+unsafeRunNamingT :: (Monad m, Show n, Monoid n, Ord n) =>
+    Int -> NamingT n m a -> m a
+unsafeRunNamingT initialIndex = runNamingT initialIndex
     (\_ _ -> error "unsafeRunNamingT: can't create new names.")
 
 {- | Run the 'NamingT' monad transformer using defaults.
 -}
-runNamingTString :: Monad m => NamingT String m a -> m a
-runNamingTString = runNamingT defaultNamingFun
+runNamingTString :: Monad m => Int -> NamingT String m a -> m a
+runNamingTString initialIndex = runNamingT initialIndex defaultNamingFun
 
 {-----------------------------------------------------------------------------}
 -- Internals
@@ -268,8 +269,8 @@ internalNewName prefix = do
 {- | Lift a function operating on integers to one operating on names.
 -}
 liftNamesM :: forall m f g. (Monad m, Traversable f, Traversable g) =>
-    (f Int -> NamingT String m (g Int)) -> f String -> m (g String)
-liftNamesM f fs = runNamingTString wrap where
+    Int -> (f Int -> NamingT String m (g Int)) -> f String -> m (g String)
+liftNamesM initialIndex f fs = runNamingTString initialIndex wrap where
     wrap :: NamingT String m (g String)
     wrap = do
         fi <- traverse autoMapName fs
@@ -281,13 +282,14 @@ liftNamesM f fs = runNamingTString wrap where
 Non-monadic variant of 'liftNamesM'.
 -}
 liftNames :: forall f g. (Traversable f, Traversable g) =>
-    (f Int -> NamingT String Identity (g Int)) -> f String -> g String
-liftNames f fs = runIdentity $ liftNamesM f fs
+    Int -> (f Int -> NamingT String Identity (g Int)) -> f String -> g String
+liftNames initialIndex f fs = runIdentity $ liftNamesM initialIndex f fs
 
 {- | Separate names from a term into a map
 -}
-slurpNames :: (Show n, Monoid n, Ord n, Traversable f) => f n -> (Map Int n, f Int)
-slurpNames fn = runIdentity $ unsafeRunNamingT $ do
+slurpNames :: (Show n, Monoid n, Ord n, Traversable f) =>
+    Int -> f n -> (Map Int n, f Int)
+slurpNames initialIndex fn = runIdentity $ unsafeRunNamingT initialIndex $ do
     fi <- traverse autoMapName fn
     nm <- Bimap.toMap <$> getNameMap
     return (nm, fi)
