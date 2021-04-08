@@ -90,8 +90,6 @@ data EncodeState = EncodeState
 
 -- haskell-language-server crashes
 -- makeFieldLabelsWith noPrefixFieldLabels ''EncodeState
--- on this, too. issue probably: https://github.com/haskell/haskell-language-server/issues/1297
---makeLenses ''EncodeState
 
 initEncodeState :: EncodeState
 initEncodeState = EncodeState 0 mempty mempty []
@@ -99,8 +97,13 @@ initEncodeState = EncodeState 0 mempty mempty []
 {-----------------------------------------------------------------------------}
 -- Manual splices
 
--- TODO Remove this section and use makeFieldLabelsWith when
+-- TODO Remove this section and use makeFieldLabelsWith (above) when
 -- haskell-language-server can handle template haskell without crashing.
+-- https://github.com/haskell/haskell-language-server/issues/1297
+-- https://github.com/haskell/haskell-language-server/issues/1342
+
+{-# ANN module "HLint: ignore Redundant bracket" #-}
+{-# ANN module "HLint: ignore Avoid lambda" #-}
 
 -- makeFieldLabelsWith noPrefixFieldLabels ''EncodeState
 -- ======>

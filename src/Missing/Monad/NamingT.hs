@@ -111,16 +111,18 @@ deriving instance MonadTrans (NamingT n)
 deriving instance MonadIO m => MonadIO (NamingT n m)
 -- ... and so on... implement as we need it
 
+-- makeFieldLabelsWith noPrefixFieldLabels ''NamingTState
+
 {-----------------------------------------------------------------------------}
 -- Manual splices
 
--- TODO Remove this section and use makeFieldLabelsWith when
+-- TODO Remove this section and use makeFieldLabelsWith (above) when
 -- haskell-language-server can handle template haskell without crashing.
 -- https://github.com/haskell/haskell-language-server/issues/1297
 -- https://github.com/haskell/haskell-language-server/issues/1342
 
--- haskell-language-server crashes
--- makeFieldLabelsWith noPrefixFieldLabels ''NamingTState
+{-# ANN module "HLint: ignore Redundant bracket" #-}
+{-# ANN module "HLint: ignore Avoid lambda" #-}
 
 instance (k_a86Y ~ A_Lens,
           a_a86Z ~ Bimap Int n_a7SZ,

@@ -70,15 +70,18 @@ data SATState = SATState
     ,   assignments :: Map Int Bool
     }
 
--- haskell-language-server crashes
 --makeFieldLabelsWith noPrefixFieldLabels ''SATState
---makeFieldLabelsNoPrefix ''SATState
 
 {-----------------------------------------------------------------------------}
 -- Manual splices
 
--- TODO Remove this section and use makeFieldLabelsWith when
+-- TODO Remove this section and use makeFieldLabelsWith (above) when
 -- haskell-language-server can handle template haskell without crashing.
+-- https://github.com/haskell/haskell-language-server/issues/1297
+-- https://github.com/haskell/haskell-language-server/issues/1342
+
+{-# ANN module "HLint: ignore Redundant bracket" #-}
+{-# ANN module "HLint: ignore Avoid lambda" #-}
 
 instance (k_amVd ~ Optics.Internal.Optic.Types.A_Lens,
           a_amVe ~ Map Int Bool,
