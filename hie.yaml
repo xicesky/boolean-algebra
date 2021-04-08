@@ -1,0 +1,21 @@
+cradle:
+  multi:
+    - path: "./local"
+      config:
+        cradle:
+          none:
+    - path: "./"
+      config:
+        cradle:
+          stack:
+            - path: "./src"
+              component: "boolean-algebra:lib"
+
+            - path: "./app/Main.hs"
+              component: "boolean-algebra:exe:boolean-algebra-exe"
+
+            - path: "./app/Paths_boolean_algebra.hs"
+              component: "boolean-algebra:exe:boolean-algebra-exe"
+
+            - path: "./test"
+              component: "boolean-algebra:test:boolean-algebra-test"
