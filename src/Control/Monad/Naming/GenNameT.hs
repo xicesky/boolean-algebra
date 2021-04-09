@@ -22,7 +22,7 @@ import Missing.Optics
 import Control.Monad.Naming.Class
 
 {-
-TODO:
+TODO / Ideas:
     - add a randomization source
 -}
 
@@ -129,7 +129,7 @@ instance Show n => Show (GenNameTState n) where
 instance Monad m => MonadUniqueInt (GenNameT n m) where
     stateIndex = GenNameT . stateFun #nsNextIndex
 
-instance (Monad m, Monoid n, Ord n) => MonadName n (GenNameT n m) where
+instance (Monad m, Ord n) => MonadName n (GenNameT n m) where
     stateNames = GenNameT . stateFun #nsNames
 
 instance (Monad m, Monoid n, Ord n) => MonadGenName n (GenNameT n m) where

@@ -12,7 +12,6 @@ import Missing.Optics
 {-
 FIXME:
     - Documentation
-    - Provide a way to run without the Monoid constraint!
 
 TODO / Ideas:
     - Create a module Control.Monad.Naming that hides internals
@@ -37,7 +36,7 @@ class Monad m => MonadUniqueInt m where
     -- Internals
     stateIndex :: EmbedStateFun Int m
 
-class (MonadUniqueInt m, Monoid n, Ord n) => MonadName n m | m -> n where
+class (MonadUniqueInt m, Ord n) => MonadName n m | m -> n where
 
     -- Internals
     stateNames :: EmbedStateFun (Bimap Int n) m

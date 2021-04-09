@@ -102,7 +102,7 @@ class Monad m => Solver s m where
     -}
     solveInt :: s -> Int -> CNF Int -> SatT a m (SatResult Int)
 
-    solve :: (Show name, Monoid name, Ord name) =>
+    solve :: Ord name =>
         s -> CNF name -> SatT name m (SatResult name)
     solve s cnf = liftSolve (solveInt s) cnf
 
@@ -114,7 +114,7 @@ mapping the results back from @Int@ to the original variable names.
 
 It is used to define the default implementation for 'solve'.
 -}
-liftSolve :: (Monad m, Show name, Monoid name, Ord name) =>
+liftSolve :: (Monad m, Ord name) =>
     (forall a. Int -> CNF Int -> SatT a m (SatResult Int))
     -> CNF name -> SatT name m (SatResult name)
 liftSolve solveInt cnf = runNamingT 1 $ do

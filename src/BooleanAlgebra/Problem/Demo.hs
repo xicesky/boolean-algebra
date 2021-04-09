@@ -154,12 +154,6 @@ solveLasq n = let
 
 {-----------------------------------------------------------------------------}
 
--- FIXME dirty hack
-instance Semigroup SCell where
-    (<>) = error "SCell can't be combined"
-instance Monoid SCell where
-    mempty = error "SCell can't be empty"
-
 solveSudoku :: IO ()
 solveSudoku = let
     problem :: BooleanExpr SCell

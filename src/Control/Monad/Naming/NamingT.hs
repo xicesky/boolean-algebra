@@ -24,6 +24,11 @@ import Missing.Optics
 
 import Control.Monad.Naming.Class
 
+{-
+TODO / Ideas:
+    - Ability to remap names
+-}
+
 {-----------------------------------------------------------------------------}
 
 {- | Internal state of 'NamingT'.
@@ -32,6 +37,7 @@ data NamingTState n = NamingTState
     {   nsNextIndex :: Int              -- ^ the next free integer index
     ,   nsNames :: Bimap Int n          -- ^ mapping @name \<-\> Int@
     }
+    deriving (Show, Eq, Ord)
 
 -- makeFieldLabelsWith noPrefixFieldLabels ''NamingTState
 
@@ -84,25 +90,16 @@ deriving instance MonadTrans (NamingT n)
 deriving instance MonadIO m => MonadIO (NamingT n m)
 -- ... and so on... implement as we need it
 
-instance Show n => Show (NamingTState n) where
-    showsPrec d (NamingTState nextIndex names)
-        = showParen (d >= 11) $ showString "NamingTState {"
-        . showString "nsNextIndex = "
-        . shows nextIndex
-        . showString ", nsNames = "
-        . shows names
-        . showString "}"
-
 instance Monad m => MonadUniqueInt (NamingT n m) where
     stateIndex = NamingT . stateFun #nsNextIndex
 
-instance (Monad m, Monoid n, Ord n) => MonadName n (NamingT n m) where
+instance (Monad m, Ord n) => MonadName n (NamingT n m) where
     stateNames = NamingT . stateFun #nsNames
 
 {-----------------------------------------------------------------------------}
 
 -- | Run the 'NamingT' monad transformer.
-runNamingT :: forall m n a. (Monad m, Monoid n, Ord n) =>
+runNamingT :: forall m n a. (Monad m, Ord n) =>
     Int -> NamingT n m a -> m a
 runNamingT initialIndex namet = do
     (a, _) <- runStateT (toStateT namet) initNamingTState
@@ -116,7 +113,7 @@ runNamingT initialIndex namet = do
 
 {- | Separate names from a term into a map
 -}
-slurpNames :: (Monoid n, Ord n, Traversable f) =>
+slurpNames :: (Ord n, Traversable f) =>
     Int -> f n -> (Map Int n, f Int)
 slurpNames initialIndex fn = runIdentity $ runNamingT initialIndex $ do
     fi <- traverse autoMapName fn
