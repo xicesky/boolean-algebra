@@ -4,7 +4,7 @@
 
 import Test.Hspec
 
-import qualified Missing.Monad.NamingTSpec
+import qualified Control.Monad.Naming.GenNameTSpec
 import qualified BooleanAlgebra.Base.PrettySpec
 import qualified BooleanAlgebra.Transform.CNFSpec
 import qualified BooleanAlgebra.Transform.VariableSpec
@@ -15,7 +15,7 @@ main = hspec spec
 
 spec :: Spec
 spec = do
-    describe "Missing.Monad.NamingT"                Missing.Monad.NamingTSpec.spec
+    describe "Control.Monad.Naming.GenNameT"        Control.Monad.Naming.GenNameTSpec.spec
     describe "BooleanAlgebra.Base.Pretty"           BooleanAlgebra.Base.PrettySpec.spec
     describe "BooleanAlgebra.Transform.CNF"         BooleanAlgebra.Transform.CNFSpec.spec
     describe "BooleanAlgebra.Transform.Variables"   BooleanAlgebra.Transform.VariableSpec.spec

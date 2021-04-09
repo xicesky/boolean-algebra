@@ -36,7 +36,8 @@ import qualified Data.Map.Strict as Map
 import Control.Monad.Error.Class
 import Control.Monad.Except
 
-import Missing.Monad.NamingT
+import Control.Monad.Naming.Class
+import Control.Monad.Naming.NamingT
 import qualified Missing.Bimap as Bimap
 
 import BooleanAlgebra.Base.Class
@@ -116,7 +117,7 @@ It is used to define the default implementation for 'solve'.
 liftSolve :: (Monad m, Show name, Monoid name, Ord name) =>
     (forall a. Int -> CNF Int -> SatT a m (SatResult Int))
     -> CNF name -> SatT name m (SatResult name)
-liftSolve solveInt cnf = unsafeRunNamingT 1 $ do
+liftSolve solveInt cnf = runNamingT 1 $ do
     cnfi <- traverse autoMapName cnf
     maxVar <- peekIndex
     result <- lift $ solveInt maxVar cnfi

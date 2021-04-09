@@ -10,15 +10,20 @@ module BooleanAlgebra.Transform.Variable
         HasNames(..)
     ,   maximumVarNum
 
-    ,   -- * Creating fresh names
-        NamingT
-    ,   MonadName
+    ,   -- * Abstracting variable names
+        MonadName
+    ,   NamingT
     ,   runNamingT
-    ,   runNamingTString
+    ,   slurpNames
+
+    ,   -- * Creating fresh names
+        MonadGenName
+    ,   GenNameT
+    ,   runGenNameT
+    ,   runGenNameTString
     ,   newNamedWithPrefix
     ,   liftNames
     ,   liftNamesM
-    ,   slurpNames
 
     ) where
 
@@ -33,7 +38,9 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 import qualified Missing.Bimap as Bimap
-import Missing.Monad.NamingT
+import Control.Monad.Naming.Class
+import Control.Monad.Naming.NamingT
+import Control.Monad.Naming.GenNameT
 import Term.Variable.Names
 import BooleanAlgebra.Base.Expression
 

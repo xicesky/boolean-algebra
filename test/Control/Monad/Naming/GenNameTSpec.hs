@@ -1,5 +1,5 @@
 
-module Missing.Monad.NamingTSpec where
+module Control.Monad.Naming.GenNameTSpec where
 
 import Data.Foldable (length)
 import Data.Functor.Identity
@@ -17,29 +17,30 @@ import Test.QuickCheck
 import Test.QuickCheck.Instances ()
 import Test.QuickCheck.Monadic
 
-import Missing.Monad.NamingT
+import Control.Monad.Naming.Class
+import Control.Monad.Naming.GenNameT
 
 {-# ANN module "HLint: ignore Redundant $" #-}
 
 {-----------------------------------------------------------------------------}
 -- Utilities
 
-type Naming = NamingT String Identity
+type Naming = GenNameT String Identity
 
 -- | Test that each entry in a list is unique
 allDifferent :: [String] -> Bool
 allDifferent xs = length (Set.fromList xs) == length xs
 
--- | Run NamingT for property testing
-monadicNamingT :: Testable a => PropertyM Naming a -> Property
-monadicNamingT = monadic run where
-    run :: NamingT String Identity Property -> Property
-    run = runIdentity . runNamingTString 1
+-- | Run GenNameT for property testing
+monadicGenNameT :: Testable a => PropertyM Naming a -> Property
+monadicGenNameT = monadic run where
+    run :: Naming Property -> Property
+    run = runIdentity . runGenNameTString 1
 
 {-----------------------------------------------------------------------------}
 
 prop_newNamed_generates_uniques :: Int -> Property
-prop_newNamed_generates_uniques count = monadicNamingT $ do
+prop_newNamed_generates_uniques count = monadicGenNameT $ do
     names <- genNames count
     return $ allDifferent names
     where

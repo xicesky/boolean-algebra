@@ -127,12 +127,12 @@ cnf_iff_or z a b = CNF $ Conjunction
 cnf_all :: [CNF a] -> CNF a
 cnf_all = CNF . joinConjunction . Conjunction . fmap unCNF
 
-tseitinTransformM :: forall m. Monad m => Term BOps Void Int -> NamingT String m (CNF Int)
+tseitinTransformM :: forall m. Monad m => Term BOps Void Int -> GenNameT String m (CNF Int)
 tseitinTransformM term = do
     (zTerm, cnf) <- cata tt term
     return $ cnf_all [cnf, cnf_just zTerm]
     where
-    tt :: Alg (TermF BOps Void Int) (NamingT String m (Literal Int, CNF Int))
+    tt :: Alg (TermF BOps Void Int) (GenNameT String m (Literal Int, CNF Int))
     tt t = sequenceA t >>= \case
         ConstT v    -> absurd v
         VariableT v -> return ((True, v), CNF $ Conjunction [])

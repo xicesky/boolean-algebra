@@ -43,12 +43,14 @@ library
       BooleanAlgebra.Transform.CNF
       BooleanAlgebra.Transform.Simplify
       BooleanAlgebra.Transform.Variable
+      Control.Monad.Naming.Class
+      Control.Monad.Naming.GenNameT
+      Control.Monad.Naming.NamingT
       Gen
       Interactive
       Missing.Bimap
       Missing.IO
       Missing.Misc
-      Missing.Monad.NamingT
       Missing.Optics
       Missing.Textual
       Missing.Void
@@ -133,7 +135,7 @@ test-suite boolean-algebra-test
       BooleanAlgebra.Solver.ClassSpec
       BooleanAlgebra.Transform.CNFSpec
       BooleanAlgebra.Transform.VariableSpec
-      Missing.Monad.NamingTSpec
+      Control.Monad.Naming.GenNameTSpec
       Paths_boolean_algebra
   hs-source-dirs:
       test
