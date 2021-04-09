@@ -8,7 +8,6 @@
 module Missing.Monad.NamingT where
 
 import Data.Maybe (fromMaybe)
-import Data.Functor.Const
 
 -- containers
 import Data.Map.Strict (Map)
@@ -32,7 +31,9 @@ FIXME:
     - Documentation
     - Shouldn't be in "Missing", rather in "Utils"
     - Provide a way to run without "error" (e.g. in ExceptT)
+    - Use a phantom tag to make unsafeRunNamingT safe.
     - Provide a way to run without the Monoid constraint!
+        - Requires a phantom tag, same as the unsafeRunNamingT
 
 TODO / Ideas:
     - add a randomization source
@@ -69,54 +70,38 @@ class (MonadName n m, Monoid n, Ord n) => MonadGenName n m | m -> n where
 
 {-----------------------------------------------------------------------------}
 
--- | Name generator function
-newtype NamingFun n = NamingFun { _namingFun :: (n -> Bool) -> n -> n }
-
--- | _Tag_ type for NamingT without a name generator
-type NoNameGen = Const ()
-
--- | _Tag_ type (alias) for NamingT with a name generator
-type WithNameGen = NamingFun
-
 {- | Internal state of 'NamingT'.
 -}
-data NamingTState gen n = NamingTState
+data NamingTState n = NamingTState
     {   nsNextIndex :: Int              -- ^ the next free integer index
-    ,   nsNames :: Bimap Int n          -- ^ mapping @name \<-\> Int@
     ,   nsPrefix :: n                   -- ^ the default prefix for fresh names
-    ,   nsScheme :: gen n               -- ^ optional name generator
+    ,   nsNames :: Bimap Int n          -- ^ mapping @name \<-\> Int@
+    ,   nsScheme :: NamingFun n
     }
 
+type NamingFun n = (n -> Bool) -> n -> n
+
 -- | Monad transformer with the ability to create fresh names.
-newtype NamingT gen n m a = NamingT { toStateT :: StateT (NamingTState gen n) m a }
+newtype NamingT n m a = NamingT { toStateT :: StateT (NamingTState n) m a }
 
-deriving instance Functor m => Functor (NamingT gen n m)
-deriving instance Monad m => Applicative (NamingT gen n m)
-deriving instance Monad m => Monad (NamingT gen n m)
-deriving instance MonadTrans (NamingT gen n)
+deriving instance Functor m => Functor (NamingT n m)
+deriving instance Monad m => Applicative (NamingT n m)
+deriving instance Monad m => Monad (NamingT n m)
+deriving instance MonadTrans (NamingT n)
 
-deriving instance MonadIO m => MonadIO (NamingT gen n m)
+deriving instance MonadIO m => MonadIO (NamingT n m)
 -- ... and so on... implement as we need it
 
-internalShow :: Show n => (gen n -> ShowS) -> NamingTState gen n -> ShowS
-internalShow showGen (NamingTState nextIndex prefix names scheme)
-    = showString "NamingTState {"
-    . showString "nsNextIndex = "
-    . shows nextIndex
-    . showString ", nsPrefix = "
-    . shows prefix
-    . showString ", nsNames = "
-    . shows names
-    . showGen scheme
-    . showString "}"
-
-instance Show n => Show (NamingTState NamingFun n) where
-    showsPrec d ns
-        = showParen (d >= 11) $ internalShow (const $ showString ", nsScheme = <?> ") ns
-
-instance Show n => Show (NamingTState NoNameGen n) where
-    showsPrec d ns
-        = showParen (d >= 11) $ internalShow (const id) ns
+instance Show n => Show (NamingTState n) where
+    showsPrec d (NamingTState nextIndex prefix names scheme)
+        = showParen (d >= 11) $ showString "NamingTState {"
+        . showString "nsNextIndex = "
+        . shows nextIndex
+        . showString ", nsPrefix = "
+        . shows prefix
+        . showString ", nsNames = "
+        . shows names
+        . showString ", nsScheme = <?> }"
 
 -- makeFieldLabelsWith noPrefixFieldLabels ''NamingTState
 
@@ -131,89 +116,85 @@ instance Show n => Show (NamingTState NoNameGen n) where
 {-# ANN module "HLint: ignore Redundant bracket" #-}
 {-# ANN module "HLint: ignore Avoid lambda" #-}
 
--- makeFieldLabelsWith noPrefixFieldLabels ''NamingTState
--- ======>
-instance (k_a71x ~ A_Lens,
-          a_a71y ~ Bimap Int n_a5cv,
-          b_a71z ~ Bimap Int n_a5cv) =>
-         LabelOptic "nsNames" k_a71x (NamingTState gen_a5cu n_a5cv) (NamingTState gen_a5cu n_a5cv) a_a71y b_a71z where
+instance (k_a86Y ~ A_Lens,
+          a_a86Z ~ Bimap Int n_a7SZ,
+          b_a870 ~ Bimap Int n_a7SZ) =>
+         LabelOptic "nsNames" k_a86Y (NamingTState n_a7SZ) (NamingTState n_a7SZ) a_a86Z b_a870 where
   {-# INLINE labelOptic #-}
   labelOptic
     = lensVL
-        (\ f_a71A s_a71B
-           -> case s_a71B of {
-                NamingTState x1_a71C x2_a71D x3_a71E x4_a71F
+        (\ f_a871 s_a872
+           -> case s_a872 of {
+                NamingTState x1_a873 x2_a874 x3_a875 x4_a876
                   -> (fmap
-                        (\ y_a71G -> (((NamingTState x1_a71C) y_a71G) x3_a71E) x4_a71F))
-                       (f_a71A x2_a71D) })
-instance (k_a71H ~ A_Lens, a_a71I ~ Int, b_a71J ~ Int) =>
-         LabelOptic "nsNextIndex" k_a71H (NamingTState gen_a5cu n_a5cv) (NamingTState gen_a5cu n_a5cv) a_a71I b_a71J where
+                        (\ y_a877 -> (((NamingTState x1_a873) x2_a874) y_a877) x4_a876))
+                       (f_a871 x3_a875) })
+instance (k_a878 ~ A_Lens, a_a879 ~ Int, b_a87a ~ Int) =>
+         LabelOptic "nsNextIndex" k_a878 (NamingTState n_a7SZ) (NamingTState n_a7SZ) a_a879 b_a87a where
   {-# INLINE labelOptic #-}
   labelOptic
     = lensVL
-        (\ f_a71K s_a71L
-           -> case s_a71L of {
-                NamingTState x1_a71M x2_a71N x3_a71O x4_a71P
+        (\ f_a87b s_a87c
+           -> case s_a87c of {
+                NamingTState x1_a87d x2_a87e x3_a87f x4_a87g
                   -> (fmap
-                        (\ y_a71Q -> (((NamingTState y_a71Q) x2_a71N) x3_a71O) x4_a71P))
-                       (f_a71K x1_a71M) })
-instance (k_a71R ~ A_Lens, a_a71S ~ n_a5cv, b_a71T ~ n_a5cv) =>
-         LabelOptic "nsPrefix" k_a71R (NamingTState gen_a5cu n_a5cv) (NamingTState gen_a5cu n_a5cv) a_a71S b_a71T where
+                        (\ y_a87h -> (((NamingTState y_a87h) x2_a87e) x3_a87f) x4_a87g))
+                       (f_a87b x1_a87d) })
+instance (k_a87i ~ A_Lens, a_a87j ~ n_a7SZ, b_a87k ~ n_a7SZ) =>
+         LabelOptic "nsPrefix" k_a87i (NamingTState n_a7SZ) (NamingTState n_a7SZ) a_a87j b_a87k where
   {-# INLINE labelOptic #-}
   labelOptic
     = lensVL
-        (\ f_a71U s_a71V
-           -> case s_a71V of {
-                NamingTState x1_a71W x2_a71X x3_a71Y x4_a71Z
+        (\ f_a87l s_a87m
+           -> case s_a87m of {
+                NamingTState x1_a87n x2_a87o x3_a87p x4_a87q
                   -> (fmap
-                        (\ y_a720 -> (((NamingTState x1_a71W) x2_a71X) y_a720) x4_a71Z))
-                       (f_a71U x3_a71Y) })
-instance (k_a721 ~ A_Lens,
-          a_a722 ~ gen_a5cu n_a5cv,
-          b_a723 ~ gen_a71w n_a5cv) =>
-         LabelOptic "nsScheme" k_a721 (NamingTState gen_a5cu n_a5cv) (NamingTState gen_a71w n_a5cv) a_a722 b_a723 where
+                        (\ y_a87r -> (((NamingTState x1_a87n) y_a87r) x3_a87p) x4_a87q))
+                       (f_a87l x2_a87o) })
+instance (k_a87s ~ A_Lens,
+          a_a87t ~ NamingFun n_a7SZ,
+          b_a87u ~ NamingFun n_a7SZ) =>
+         LabelOptic "nsScheme" k_a87s (NamingTState n_a7SZ) (NamingTState n_a7SZ) a_a87t b_a87u where
   {-# INLINE labelOptic #-}
   labelOptic
     = lensVL
-        (\ f_a724 s_a725
-           -> case s_a725 of {
-                NamingTState x1_a726 x2_a727 x3_a728 x4_a729
+        (\ f_a87v s_a87w
+           -> case s_a87w of {
+                NamingTState x1_a87x x2_a87y x3_a87z x4_a87A
                   -> (fmap
-                        (\ y_a72a -> (((NamingTState x1_a726) x2_a727) x3_a728) y_a72a))
-                       (f_a724 x4_a729) })
+                        (\ y_a87B -> (((NamingTState x1_a87x) x2_a87y) x3_a87z) y_a87B))
+                       (f_a87v x4_a87A) })
 
 {-----------------------------------------------------------------------------}
 
 defaultNamingFun :: NamingFun String
-defaultNamingFun = NamingFun f where
-    f :: (String -> Bool) -> String -> String
-    f filter prefix = head $ dropWhile (not . filter) (varnames prefix)
+defaultNamingFun filter prefix = head $ dropWhile (not . filter) varnames where
     suffixes :: [String]
     suffixes = [replicate k ['a'..'z'] | k <- [1..]] >>= sequence
     --suffixes = "" :([replicate k ['a'..'z'] | k <- [1..]] >>= sequence)
-    varnames :: String -> [String]
-    varnames prefix = (prefix++) <$> suffixes
+    varnames :: [String]
+    varnames = (prefix++) <$> suffixes
 
 {-----------------------------------------------------------------------------}
 
-instance Monad m => MonadUniqueInt (NamingT gen n m) where
+instance Monad m => MonadUniqueInt (NamingT n m) where
     stateIndex = NamingT . stateFun #nsNextIndex
 
-instance (Monad m, Monoid n, Ord n) => MonadName n (NamingT gen n m) where
+instance (Monad m, Monoid n, Ord n) => MonadName n (NamingT n m) where
     stateNames = NamingT . stateFun #nsNames
 
-instance (Monad m, Monoid n, Ord n) => MonadGenName n (NamingT NamingFun n m) where
+instance (Monad m, Monoid n, Ord n) => MonadGenName n (NamingT n m) where
     statePrefix = NamingT . stateFun #nsPrefix
     stateScheme = NamingT . stateFun #nsScheme
 
 -- | Run the 'NamingT' monad transformer.
-runGenNamingT :: forall gen m n a. (Monad m, Monoid n, Ord n) =>
-    Int -> gen n -> NamingT gen n m a -> m a
-runGenNamingT initialIndex nfun namet = do
+runNamingT :: forall m n a. (Monad m, Monoid n, Ord n) =>
+    Int -> NamingFun n -> NamingT n m a -> m a
+runNamingT initialIndex nfun namet = do
     (a, _) <- runStateT (toStateT namet) initNamingTState
     return a
     where
-        initNamingTState :: NamingTState gen n
+        initNamingTState :: NamingTState n
         initNamingTState = NamingTState
             {   nsNextIndex = initialIndex
             ,   nsPrefix = mempty
@@ -226,14 +207,15 @@ to create new names.
 
 Trying to create a name will result in an /'error'/.
 -}
-runNamingT :: (Monad m, Monoid n, Ord n) =>
-    Int -> NamingT NoNameGen n m a -> m a
-runNamingT initialIndex = runGenNamingT initialIndex (Const ())
+unsafeRunNamingT :: (Monad m, Monoid n, Ord n) =>
+    Int -> NamingT n m a -> m a
+unsafeRunNamingT initialIndex = runNamingT initialIndex
+    (\_ _ -> error "unsafeRunNamingT: can't create new names.")
 
 {- | Run the 'NamingT' monad transformer using defaults.
 -}
-runNamingTString :: Monad m => Int -> NamingT NamingFun String m a -> m a
-runNamingTString initialIndex = runGenNamingT initialIndex defaultNamingFun
+runNamingTString :: Monad m => Int -> NamingT String m a -> m a
+runNamingTString initialIndex = runNamingT initialIndex defaultNamingFun
 
 {-----------------------------------------------------------------------------}
 -- Internal utilities
@@ -242,7 +224,7 @@ internalGenerateName :: MonadGenName n m => n -> m n
 internalGenerateName prefix = do
     names <- sGet stateNames
     prefix0 <- sGet statePrefix
-    (NamingFun nFun) <- sGet stateScheme
+    nFun <- sGet stateScheme
     let name = nFun (`Bimap.notMemberR` names) (prefix0 <> prefix)
     return name
 
@@ -313,9 +295,9 @@ autoMapName n = indexOf n >>= \case
 {- | Lift a function operating on integers to one operating on names.
 -}
 liftNamesM :: forall m f g. (Monad m, Traversable f, Traversable g) =>
-    Int -> (f Int -> NamingT NamingFun String m (g Int)) -> f String -> m (g String)
+    Int -> (f Int -> NamingT String m (g Int)) -> f String -> m (g String)
 liftNamesM initialIndex f fs = runNamingTString initialIndex wrap where
-    wrap :: NamingT NamingFun String m (g String)
+    wrap :: NamingT String m (g String)
     wrap = do
         fi <- traverse autoMapName fs
         gi <- f fi
@@ -326,14 +308,14 @@ liftNamesM initialIndex f fs = runNamingTString initialIndex wrap where
 Non-monadic variant of 'liftNamesM'.
 -}
 liftNames :: forall f g. (Traversable f, Traversable g) =>
-    Int -> (f Int -> NamingT NamingFun String Identity (g Int)) -> f String -> g String
+    Int -> (f Int -> NamingT String Identity (g Int)) -> f String -> g String
 liftNames initialIndex f fs = runIdentity $ liftNamesM initialIndex f fs
 
 {- | Separate names from a term into a map
 -}
 slurpNames :: (Monoid n, Ord n, Traversable f) =>
     Int -> f n -> (Map Int n, f Int)
-slurpNames initialIndex fn = runIdentity $ runNamingT initialIndex $ do
+slurpNames initialIndex fn = runIdentity $ unsafeRunNamingT initialIndex $ do
     fi <- traverse autoMapName fn
     nm <- Bimap.toMap <$> getNameMap
     return (nm, fi)
