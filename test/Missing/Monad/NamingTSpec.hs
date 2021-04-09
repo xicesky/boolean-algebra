@@ -24,7 +24,7 @@ import Missing.Monad.NamingT
 {-----------------------------------------------------------------------------}
 -- Utilities
 
-type Naming = NamingT String Identity
+type Naming = NamingT WithNameGen String Identity
 
 -- | Test that each entry in a list is unique
 allDifferent :: [String] -> Bool
@@ -33,7 +33,7 @@ allDifferent xs = length (Set.fromList xs) == length xs
 -- | Run NamingT for property testing
 monadicNamingT :: Testable a => PropertyM Naming a -> Property
 monadicNamingT = monadic run where
-    run :: NamingT String Identity Property -> Property
+    run :: Naming Property -> Property
     run = runIdentity . runNamingTString 1
 
 {-----------------------------------------------------------------------------}

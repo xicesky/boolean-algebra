@@ -13,6 +13,8 @@ module BooleanAlgebra.Transform.Variable
     ,   -- * Creating fresh names
         NamingT
     ,   MonadName
+    ,   NoNameGen
+    ,   WithNameGen
     ,   runNamingT
     ,   runNamingTString
     ,   newNamedWithPrefix
