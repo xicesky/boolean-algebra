@@ -1,9 +1,13 @@
 
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Control.Monad.Naming.Class where
 
 import Data.Maybe (fromMaybe)
+
+-- mtl / transformers
+import Control.Monad.State.Strict
 
 import Missing.Bimap
 import qualified Missing.Bimap as Bimap
@@ -61,6 +65,19 @@ defaultNamingFun filter prefix = head $ dropWhile (not . filter) varnames where
     --suffixes = "" :([replicate k ['a'..'z'] | k <- [1..]] >>= sequence)
     varnames :: [String]
     varnames = (prefix++) <$> suffixes
+
+{-----------------------------------------------------------------------------}
+-- Orphans for lifting through other monad transformers
+
+instance MonadUniqueInt m => MonadUniqueInt (StateT s m) where
+    stateIndex = lift . stateIndex
+
+instance MonadName n m => MonadName n (StateT s m) where
+    stateNames = lift . stateNames
+
+instance MonadGenName n m => MonadGenName n (StateT s m) where
+    statePrefix = lift . statePrefix
+    stateScheme = lift . stateScheme
 
 {-----------------------------------------------------------------------------}
 -- Internal utilities

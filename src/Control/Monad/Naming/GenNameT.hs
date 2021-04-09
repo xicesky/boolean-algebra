@@ -8,7 +8,7 @@ module Control.Monad.Naming.GenNameT where
 
 -- mtl / transformers
 import Control.Monad.Identity
-import Control.Monad.State
+import Control.Monad.State.Strict
 
 -- optics
 import Optics
@@ -32,8 +32,8 @@ TODO / Ideas:
 -}
 data GenNameTState n = GenNameTState
     {   nsNextIndex :: Int              -- ^ the next free integer index
-    ,   nsPrefix :: n                   -- ^ the default prefix for fresh names
     ,   nsNames :: Bimap Int n          -- ^ mapping @name \<-\> Int@
+    ,   nsPrefix :: n                   -- ^ the default prefix for fresh names
     ,   nsScheme :: NamingFun n         -- ^ a name generator
     }
 
@@ -52,55 +52,54 @@ data GenNameTState n = GenNameTState
 
 -- makeFieldLabelsWith noPrefixFieldLabels ''GenNameTState
 -- ======>
-instance (k_a74E ~ A_Lens,
-          a_a74F ~ Bimap Int n_a718,
-          b_a74G ~ Bimap Int n_a718) =>
-         LabelOptic "nsNames" k_a74E (GenNameTState n_a718) (GenNameTState n_a718) a_a74F b_a74G where
+instance (k_a78N ~ A_Lens,
+          a_a78O ~ Bimap Int n_a5BX,
+          b_a78P ~ Bimap Int n_a5BX) =>
+         LabelOptic "nsNames" k_a78N (GenNameTState n_a5BX) (GenNameTState n_a5BX) a_a78O b_a78P where
   {-# INLINE labelOptic #-}
   labelOptic
     = lensVL
-        (\ f_a74H s_a74I
-           -> case s_a74I of {
-                GenNameTState x1_a74J x2_a74K x3_a74L x4_a74M
+        (\ f_a78Q s_a78R
+           -> case s_a78R of {
+                GenNameTState x1_a78S x2_a78T x3_a78U x4_a78V
                   -> (fmap
-                        (\ y_a74N -> (((GenNameTState x1_a74J) x2_a74K) y_a74N) x4_a74M))
-                       (f_a74H x3_a74L) })
-instance (k_a74O ~ A_Lens, a_a74P ~ Int, b_a74Q ~ Int) =>
-         LabelOptic "nsNextIndex" k_a74O (GenNameTState n_a718) (GenNameTState n_a718) a_a74P b_a74Q where
+                        (\ y_a78W -> (((GenNameTState x1_a78S) y_a78W) x3_a78U) x4_a78V))
+                       (f_a78Q x2_a78T) })
+instance (k_a78X ~ A_Lens, a_a78Y ~ Int, b_a78Z ~ Int) =>
+         LabelOptic "nsNextIndex" k_a78X (GenNameTState n_a5BX) (GenNameTState n_a5BX) a_a78Y b_a78Z where
   {-# INLINE labelOptic #-}
   labelOptic
     = lensVL
-        (\ f_a74R s_a74S
-           -> case s_a74S of {
-                GenNameTState x1_a74T x2_a74U x3_a74V x4_a74W
+        (\ f_a790 s_a791
+           -> case s_a791 of {
+                GenNameTState x1_a792 x2_a793 x3_a794 x4_a795
                   -> (fmap
-                        (\ y_a74X -> (((GenNameTState y_a74X) x2_a74U) x3_a74V) x4_a74W))
-                       (f_a74R x1_a74T) })
-instance (k_a74Y ~ A_Lens, a_a74Z ~ n_a718, b_a750 ~ n_a718) =>
-         LabelOptic "nsPrefix" k_a74Y (GenNameTState n_a718) (GenNameTState n_a718) a_a74Z b_a750 where
+                        (\ y_a796 -> (((GenNameTState y_a796) x2_a793) x3_a794) x4_a795))
+                       (f_a790 x1_a792) })
+instance (k_a797 ~ A_Lens, a_a798 ~ n_a5BX, b_a799 ~ n_a5BX) =>
+         LabelOptic "nsPrefix" k_a797 (GenNameTState n_a5BX) (GenNameTState n_a5BX) a_a798 b_a799 where
   {-# INLINE labelOptic #-}
   labelOptic
     = lensVL
-        (\ f_a751 s_a752
-           -> case s_a752 of {
-                GenNameTState x1_a753 x2_a754 x3_a755 x4_a756
+        (\ f_a79a s_a79b
+           -> case s_a79b of {
+                GenNameTState x1_a79c x2_a79d x3_a79e x4_a79f
                   -> (fmap
-                        (\ y_a757 -> (((GenNameTState x1_a753) y_a757) x3_a755) x4_a756))
-                       (f_a751 x2_a754) })
-instance (k_a758 ~ A_Lens,
-          a_a759 ~ NamingFun n_a718,
-          b_a75a ~ NamingFun n_a718) =>
-         LabelOptic "nsScheme" k_a758 (GenNameTState n_a718) (GenNameTState n_a718) a_a759 b_a75a where
+                        (\ y_a79g -> (((GenNameTState x1_a79c) x2_a79d) y_a79g) x4_a79f))
+                       (f_a79a x3_a79e) })
+instance (k_a79h ~ A_Lens,
+          a_a79i ~ NamingFun n_a5BX,
+          b_a79j ~ NamingFun n_a5BX) =>
+         LabelOptic "nsScheme" k_a79h (GenNameTState n_a5BX) (GenNameTState n_a5BX) a_a79i b_a79j where
   {-# INLINE labelOptic #-}
   labelOptic
     = lensVL
-        (\ f_a75b s_a75c
-           -> case s_a75c of {
-                GenNameTState x1_a75d x2_a75e x3_a75f x4_a75g
+        (\ f_a79k s_a79l
+           -> case s_a79l of {
+                GenNameTState x1_a79m x2_a79n x3_a79o x4_a79p
                   -> (fmap
-                        (\ y_a75h -> (((GenNameTState x1_a75d) x2_a75e) x3_a75f) y_a75h))
-                       (f_a75b x4_a75g) })
-
+                        (\ y_a79q -> (((GenNameTState x1_a79m) x2_a79n) x3_a79o) y_a79q))
+                       (f_a79k x4_a79p) })
 
 {-----------------------------------------------------------------------------}
 

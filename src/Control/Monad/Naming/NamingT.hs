@@ -11,7 +11,7 @@ import Data.Map.Strict (Map)
 
 -- mtl / transformers
 import Control.Monad.Identity
-import Control.Monad.State
+import Control.Monad.State.Strict
 
 -- optics
 import Optics
