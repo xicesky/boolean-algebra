@@ -30,36 +30,42 @@ import Missing.Optics
 FIXME:
     - Documentation
     - Shouldn't be in "Missing", rather in "Utils"
-    - Use a phantom tag to make unsafeRunNamingT safe.
     - Provide a way to run without "error" (e.g. in ExceptT)
-        - Then get rid of the "Show n" constraint!
+    - Use a phantom tag to make unsafeRunNamingT safe.
     - Provide a way to run without the Monoid constraint!
         - Requires a phantom tag, same as the unsafeRunNamingT
 
-TODO:
+TODO / Ideas:
     - add a randomization source
+
+    - The state... functions don't give us any laws to hold on to.
+        Find more specific types that can provide all the neccessary
+        functionality and don't just expose plain states.
+        For example: The index cannot be reset, names cannot be deleted,
+        the scheme cannot be read.
 -}
 
 {-----------------------------------------------------------------------------}
+
+class Monad m => MonadUniqueInt m where
+
+    -- Internals
+    stateIndex :: EmbedStateFun Int m
+
+class (MonadUniqueInt m, Monoid n, Ord n) => MonadName n m | m -> n where
+
+    -- Internals
+    stateNames :: EmbedStateFun (Bimap Int n) m
 
 {- | Monad tranformer interface
 
 This should be implemented for all monads that provide fresh names,
 most likely stacks of monad tranformers that use 'NamingT'.
 -}
-class (Monad m, Monoid n, Ord n) => MonadName n m | m -> n where
+class (MonadName n m, Monoid n, Ord n) => MonadGenName n m | m -> n where
 
     -- Internals
-    {-
-    TODO: These functions don't give us any laws to hold on to.
-    Find more specific types that can provide all the neccessary
-    functionality and don't just expose plain states.
-    For example: The index cannot be reset, names cannot be deleted,
-    the scheme cannot be read.
-    -}
-    stateIndex :: EmbedStateFun Int m
     statePrefix :: EmbedStateFun n m
-    stateNames :: EmbedStateFun (Bimap Int n) m
     stateScheme :: EmbedStateFun (NamingFun n) m
 
 {-----------------------------------------------------------------------------}
@@ -171,14 +177,18 @@ defaultNamingFun filter prefix = head $ dropWhile (not . filter) varnames where
 
 {-----------------------------------------------------------------------------}
 
-instance (Monad m, Show n, Monoid n, Ord n) => MonadName n (NamingT n m) where
+instance Monad m => MonadUniqueInt (NamingT n m) where
     stateIndex = NamingT . stateFun #nsNextIndex
-    statePrefix = NamingT . stateFun #nsPrefix
+
+instance (Monad m, Monoid n, Ord n) => MonadName n (NamingT n m) where
     stateNames = NamingT . stateFun #nsNames
+
+instance (Monad m, Monoid n, Ord n) => MonadGenName n (NamingT n m) where
+    statePrefix = NamingT . stateFun #nsPrefix
     stateScheme = NamingT . stateFun #nsScheme
 
 -- | Run the 'NamingT' monad transformer.
-runNamingT :: forall m n a. (Monad m, Show n, Monoid n, Ord n) =>
+runNamingT :: forall m n a. (Monad m, Monoid n, Ord n) =>
     Int -> NamingFun n -> NamingT n m a -> m a
 runNamingT initialIndex nfun namet = do
     (a, _) <- runStateT (toStateT namet) initNamingTState
@@ -197,7 +207,7 @@ to create new names.
 
 Trying to create a name will result in an /'error'/.
 -}
-unsafeRunNamingT :: (Monad m, Show n, Monoid n, Ord n) =>
+unsafeRunNamingT :: (Monad m, Monoid n, Ord n) =>
     Int -> NamingT n m a -> m a
 unsafeRunNamingT initialIndex = runNamingT initialIndex
     (\_ _ -> error "unsafeRunNamingT: can't create new names.")
@@ -210,7 +220,7 @@ runNamingTString initialIndex = runNamingT initialIndex defaultNamingFun
 {-----------------------------------------------------------------------------}
 -- Internal utilities
 
-internalGenerateName :: MonadName n m => n -> m n
+internalGenerateName :: MonadGenName n m => n -> m n
 internalGenerateName prefix = do
     names <- sGet stateNames
     prefix0 <- sGet statePrefix
@@ -223,10 +233,10 @@ internalGenerateName prefix = do
 
 -- Visible externally
 
-newIndex :: MonadName n m => m Int
+newIndex :: MonadUniqueInt m => m Int
 newIndex = stateIndex $ \i -> (i, i+1)
 
-peekIndex :: MonadName n m => m Int
+peekIndex :: MonadUniqueInt m => m Int
 peekIndex = sGet stateIndex
 
 -- | FIXME This can /fail/
@@ -241,15 +251,15 @@ newExactName name = do
         Left ValueExistsError   -> error "Name already exists"
         Right m                 -> m
 
-newNamedWithPrefix :: MonadName n m => n -> m Int
+newNamedWithPrefix :: MonadGenName n m => n -> m Int
 newNamedWithPrefix prefix = do
     n <- internalGenerateName prefix
     newExactName n
 
-newNamed :: MonadName n m => m Int
+newNamed :: MonadGenName n m => m Int
 newNamed = newNamedWithPrefix mempty
 
-setNamePrefix :: MonadName n m => n -> m ()
+setNamePrefix :: MonadGenName n m => n -> m ()
 setNamePrefix = sSet statePrefix
 
 getNameMap :: MonadName n m => m (Bimap Int n)
@@ -303,7 +313,7 @@ liftNames initialIndex f fs = runIdentity $ liftNamesM initialIndex f fs
 
 {- | Separate names from a term into a map
 -}
-slurpNames :: (Show n, Monoid n, Ord n, Traversable f) =>
+slurpNames :: (Monoid n, Ord n, Traversable f) =>
     Int -> f n -> (Map Int n, f Int)
 slurpNames initialIndex fn = runIdentity $ unsafeRunNamingT initialIndex $ do
     fi <- traverse autoMapName fn
