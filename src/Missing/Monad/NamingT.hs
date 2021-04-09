@@ -49,43 +49,18 @@ most likely stacks of monad tranformers that use 'NamingT'.
 -}
 class (Monad m, Monoid n, Ord n) => MonadName n m | m -> n where
 
-    newIndex :: m Int
-    peekIndex :: m Int
-    newNamedWithPrefix :: n -> m Int
-
-    -- | FIXME This can /fail/
-    newExactName :: n -> m Int
-
-    newNamed :: m Int
-    newNamed = newNamedWithPrefix mempty
-
-    setNamePrefix :: n -> m ()
-    getNameMap :: m (Bimap Int n)
-
-    nameOf :: Int -> m (Maybe n)
-    nameOf i = Bimap.lookup i <$> getNameMap
-
-    indexOf :: n -> m (Maybe Int)
-    indexOf n = Bimap.lookupR n <$> getNameMap
-
-    -- | /Unsafe/ version of nameOf
-    unsafeNameOf :: Int -> m n
-    unsafeNameOf i = fromMaybe (error $ "unsafeNameOf " ++ show i) <$> nameOf i
-
-    {- | Automatically map names
-
-    Maps names to indices by looking them up using 'indexOf' or
-    creates a new name using newExactName. Use with a traversal to get rid
-    of all names, for example:
-
-    >>> unsafeRunNamingT $ traverse autoMapName ["a", "b", "c", "b", "a", "c"]
-
-    [0,1,2,1,0,2]
+    -- Internals
+    {-
+    TODO: These functions don't give us any laws to hold on to.
+    Find more specific types that can provide all the neccessary
+    functionality and don't just expose plain states.
+    For example: The index cannot be reset, names cannot be deleted,
+    the scheme cannot be read.
     -}
-    autoMapName :: n -> m Int
-    autoMapName n = indexOf n >>= \case
-        Just i      -> return i
-        Nothing     -> newExactName n   -- TODO test: should not fail here
+    stateIndex :: EmbedStateFun Int m
+    statePrefix :: EmbedStateFun n m
+    stateNames :: EmbedStateFun (Bimap Int n) m
+    stateScheme :: EmbedStateFun (NamingFun n) m
 
 {-----------------------------------------------------------------------------}
 
@@ -197,22 +172,10 @@ defaultNamingFun filter prefix = head $ dropWhile (not . filter) varnames where
 {-----------------------------------------------------------------------------}
 
 instance (Monad m, Show n, Monoid n, Ord n) => MonadName n (NamingT n m) where
-    newIndex :: NamingT n m Int
-    newIndex = NamingT internalNewIndex
-
-    peekIndex :: NamingT n m Int
-    peekIndex = NamingT $ use #nsNextIndex
-
-    newNamedWithPrefix :: n -> NamingT n m Int
-    newNamedWithPrefix prefix = NamingT $ internalNewName prefix
-
-    newExactName :: n -> NamingT n m Int
-    newExactName name = NamingT $ internalNewExactName name
-
-    setNamePrefix = NamingT . assign #nsPrefix
-    getNameMap = NamingT $ use #nsNames
-    nameOf i = NamingT $ Bimap.lookup i <$> use #nsNames
-    indexOf n = NamingT $ Bimap.lookupR n <$> use #nsNames
+    stateIndex = NamingT . stateFun #nsNextIndex
+    statePrefix = NamingT . stateFun #nsPrefix
+    stateNames = NamingT . stateFun #nsNames
+    stateScheme = NamingT . stateFun #nsScheme
 
 -- | Run the 'NamingT' monad transformer.
 runNamingT :: forall m n a. (Monad m, Show n, Monoid n, Ord n) =>
@@ -245,37 +208,77 @@ runNamingTString :: Monad m => Int -> NamingT String m a -> m a
 runNamingTString initialIndex = runNamingT initialIndex defaultNamingFun
 
 {-----------------------------------------------------------------------------}
--- Internals
+-- Internal utilities
 
-internalNewIndex :: Monad m => StateT (NamingTState n) m Int
-internalNewIndex = updating #nsNextIndex (+1)
-
-internalGenerateName :: (Ord n, Semigroup n, Monad m) => n -> StateT (NamingTState n) m n
+internalGenerateName :: MonadName n m => n -> m n
 internalGenerateName prefix = do
-    names <- use #nsNames
-    prefix0 <- use #nsPrefix
-    nFun <- use #nsScheme
+    names <- sGet stateNames
+    prefix0 <- sGet statePrefix
+    nFun <- sGet stateScheme
     let name = nFun (`Bimap.notMemberR` names) (prefix0 <> prefix)
     return name
 
-internalNewExactName :: (Show n, Ord n, Semigroup n, Monad m) => n -> StateT (NamingTState n) m Int
-internalNewExactName name = do
-    i <- internalNewIndex
-    modifying' #nsNames $ Bimap.insertUnsafe i name
-    return i
+{-----------------------------------------------------------------------------}
+-- Using MonadName
 
-internalNewName :: (Show n, Ord n, Semigroup n, Monad m) => n -> StateT (NamingTState n) m Int
-internalNewName prefix = do
+-- Visible externally
+
+newIndex :: MonadName n m => m Int
+newIndex = stateIndex $ \i -> (i, i+1)
+
+peekIndex :: MonadName n m => m Int
+peekIndex = sGet stateIndex
+
+-- | FIXME This can /fail/
+newExactName :: forall n m. MonadName n m => n -> m Int
+newExactName name = do
+    i <- newIndex
+    stateNames $ \names -> (i, ins i name names)
+    where
+    ins :: Int -> n -> Bimap Int n -> Bimap Int n
+    ins va vb map = case Bimap.insert va vb map of
+        Left KeyExistsError     -> error $ "Index " ++ show va ++ " already exists"
+        Left ValueExistsError   -> error "Name already exists"
+        Right m                 -> m
+
+newNamedWithPrefix :: MonadName n m => n -> m Int
+newNamedWithPrefix prefix = do
     n <- internalGenerateName prefix
-    internalNewExactName n
+    newExactName n
 
--- | Create a fresh name (internal)
--- fsMkFreshName :: String -> FreshState -> (Int, FreshState)
--- fsMkFreshName prefix (FreshState index p names) = let
---     name :: String
---     name = findFreshName names prefix
---     in (index, FreshState (index+1) p (mappedInsert index name names))
+newNamed :: MonadName n m => m Int
+newNamed = newNamedWithPrefix mempty
 
+setNamePrefix :: MonadName n m => n -> m ()
+setNamePrefix = sSet statePrefix
+
+getNameMap :: MonadName n m => m (Bimap Int n)
+getNameMap = sGet stateNames
+
+nameOf :: MonadName n m => Int -> m (Maybe n)
+nameOf i = Bimap.lookup i <$> getNameMap
+
+indexOf :: MonadName n m => n -> m (Maybe Int)
+indexOf n = Bimap.lookupR n <$> getNameMap
+
+-- | /Unsafe/ version of nameOf
+unsafeNameOf :: MonadName n m => Int -> m n
+unsafeNameOf i = fromMaybe (error $ "unsafeNameOf " ++ show i) <$> nameOf i
+
+{- | Automatically map names
+
+Maps names to indices by looking them up using 'indexOf' or
+creates a new name using newExactName. Use with a traversal to get rid
+of all names, for example:
+
+>>> unsafeRunNamingT $ traverse autoMapName ["a", "b", "c", "b", "a", "c"]
+
+[0,1,2,1,0,2]
+-}
+autoMapName :: MonadName n m => n -> m Int
+autoMapName n = indexOf n >>= \case
+    Just i      -> return i
+    Nothing     -> newExactName n   -- TODO test: should not fail here
 
 {-----------------------------------------------------------------------------}
 

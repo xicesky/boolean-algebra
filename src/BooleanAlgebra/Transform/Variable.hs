@@ -11,10 +11,11 @@ module BooleanAlgebra.Transform.Variable
     ,   maximumVarNum
 
     ,   -- * Creating fresh names
-        NamingT(..)
-    ,   MonadName(..)
+        NamingT
+    ,   MonadName
     ,   runNamingT
     ,   runNamingTString
+    ,   newNamedWithPrefix
     ,   liftNames
     ,   liftNamesM
     ,   slurpNames
