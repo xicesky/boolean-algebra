@@ -54,6 +54,12 @@ testChooseInt01 = let
     problem = choose "x" [1..9]
     in decodeChoose "x" [1..9] (simpleSolve problem)
 
+testChooseInt02 :: Maybe Int
+testChooseInt02 = fst $ runEncodeM $ do
+    x <- newChoiceVar "x" [1..9]
+    withSolution $ do
+        getChoiceVal x
+
 {-----------------------------------------------------------------------------}
 -- Matrix structure problems
 

@@ -104,7 +104,7 @@ instance (k_a79h ~ A_Lens,
 {-----------------------------------------------------------------------------}
 
 -- | Monad transformer with the ability to create fresh names.
-newtype GenNameT n m a = GenNameT { toStateT :: StateT (GenNameTState n) m a }
+newtype GenNameT n m a = GenNameT { unGenNameT :: StateT (GenNameTState n) m a }
 
 deriving instance Functor m => Functor (GenNameT n m)
 deriving instance Monad m => Applicative (GenNameT n m)
@@ -141,7 +141,7 @@ instance (Monad m, Monoid n, Ord n) => MonadGenName n (GenNameT n m) where
 runGenNameT :: forall m n a. (Monad m, Monoid n, Ord n) =>
     Int -> NamingFun n -> GenNameT n m a -> m a
 runGenNameT initialIndex nfun namet = do
-    (a, _) <- runStateT (toStateT namet) initGenNameTState
+    (a, _) <- runStateT (unGenNameT namet) initGenNameTState
     return a
     where
         initGenNameTState :: GenNameTState n

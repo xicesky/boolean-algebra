@@ -25,12 +25,17 @@ import Optics.State (modifying, use)
 import Data.Map.Optics
 import qualified Optics.State as ST
 
+import Control.Monad.Naming.Class
+import Control.Monad.Naming.GenNameT hiding (toStateT)
+
 import BooleanAlgebra.Base.Class
 import BooleanAlgebra.Base.Expression
 import BooleanAlgebra.Base.Logic
 import BooleanAlgebra.Transform.CNF
 import BooleanAlgebra.Solver.Class
 import BooleanAlgebra.Solver.Basic
+
+import GHC.Stack (HasCallStack)
 
 {-----------------------------------------------------------------------------}
 -- Notes
@@ -81,18 +86,23 @@ data VarProps where
     deriving (Show, Eq, Ord)
 
 data EncodeState = EncodeState
-    {   esNextIndex :: Int
-    ,   esVarProps :: Map Int VarProps
-    ,   esNameMap :: Map VarName Int
+    {   esVarProps :: Map Int VarProps
     ,   esConstraints :: [BooleanExpr String]
     }
     deriving (Show, Eq)
 
+-- FIXME Could just be a reader
+data DecodeState = DecodeState
+    {   dsVarProps :: Map Int VarProps
+    ,   dsSolution :: Map String Bool
+    }
+
 -- haskell-language-server crashes
 -- makeFieldLabelsWith noPrefixFieldLabels ''EncodeState
+-- makeFieldLabelsWith noPrefixFieldLabels ''DecodeState
 
 initEncodeState :: EncodeState
-initEncodeState = EncodeState 0 mempty mempty []
+initEncodeState = EncodeState mempty []
 
 {-----------------------------------------------------------------------------}
 -- Manual splices
@@ -107,103 +117,107 @@ initEncodeState = EncodeState 0 mempty mempty []
 
 -- makeFieldLabelsWith noPrefixFieldLabels ''EncodeState
 -- ======>
-instance (k_as5N ~ A_Lens,
-            a_as5O ~ [BooleanExpr String],
-            b_as5P ~ [BooleanExpr String]) =>
-            LabelOptic "esConstraints" k_as5N EncodeState EncodeState a_as5O b_as5P where
-    {-# INLINE labelOptic #-}
-    labelOptic
-        = lensVL
-            (\ f_as5Q s_as5R
-                -> case s_as5R of {
-                    EncodeState x1_as5S x2_as5T x3_as5U x4_as5V
-                        -> (fmap
-                            (\ y_as5W -> (((EncodeState x1_as5S) x2_as5T) x3_as5U) y_as5W))
-                            (f_as5Q x4_as5V) })
-instance (k_as5X ~ A_Lens,
-            a_as5Y ~ Map VarName Int,
-            b_as5Z ~ Map VarName Int) =>
-            LabelOptic "esNameMap" k_as5X EncodeState EncodeState a_as5Y b_as5Z where
-    {-# INLINE labelOptic #-}
-    labelOptic
-        = lensVL
-            (\ f_as60 s_as61
-                -> case s_as61 of {
-                    EncodeState x1_as62 x2_as63 x3_as64 x4_as65
-                        -> (fmap
-                            (\ y_as66 -> (((EncodeState x1_as62) x2_as63) y_as66) x4_as65))
-                            (f_as60 x3_as64) })
-instance (k_as67 ~ A_Lens, a_as68 ~ Int, b_as69 ~ Int) =>
-            LabelOptic "esNextIndex" k_as67 EncodeState EncodeState a_as68 b_as69 where
-    {-# INLINE labelOptic #-}
-    labelOptic
-        = lensVL
-            (\ f_as6a s_as6b
-                -> case s_as6b of {
-                    EncodeState x1_as6c x2_as6d x3_as6e x4_as6f
-                        -> (fmap
-                            (\ y_as6g -> (((EncodeState y_as6g) x2_as6d) x3_as6e) x4_as6f))
-                            (f_as6a x1_as6c) })
-instance (k_as6h ~ A_Lens,
-            a_as6i ~ Map Int VarProps,
-            b_as6j ~ Map Int VarProps) =>
-            LabelOptic "esVarProps" k_as6h EncodeState EncodeState a_as6i b_as6j where
-    {-# INLINE labelOptic #-}
-    labelOptic
-        = lensVL
-            (\ f_as6k s_as6l
-                -> case s_as6l of {
-                    EncodeState x1_as6m x2_as6n x3_as6o x4_as6p
-                        -> (fmap
-                            (\ y_as6q -> (((EncodeState x1_as6m) y_as6q) x3_as6o) x4_as6p))
-                            (f_as6k x2_as6n) })
+instance (k_apWG ~ A_Lens,
+          a_apWH ~ [BooleanExpr String],
+          b_apWI ~ [BooleanExpr String]) =>
+         LabelOptic "esConstraints" k_apWG EncodeState EncodeState a_apWH b_apWI where
+  {-# INLINE labelOptic #-}
+  labelOptic
+    = lensVL
+        (\ f_apWJ s_apWK
+           -> case s_apWK of {
+                EncodeState x1_apWL x2_apWM
+                  -> (fmap (\ y_apWN -> (EncodeState x1_apWL) y_apWN))
+                       (f_apWJ x2_apWM) })
+instance (k_apWO ~ A_Lens,
+          a_apWP ~ Map Int VarProps,
+          b_apWQ ~ Map Int VarProps) =>
+         LabelOptic "esVarProps" k_apWO EncodeState EncodeState a_apWP b_apWQ where
+  {-# INLINE labelOptic #-}
+  labelOptic
+    = lensVL
+        (\ f_apWR s_apWS
+           -> case s_apWS of {
+                EncodeState x1_apWT x2_apWU
+                  -> (fmap (\ y_apWV -> (EncodeState y_apWV) x2_apWU))
+                       (f_apWR x1_apWT) })
+
+-- makeFieldLabelsWith noPrefixFieldLabels ''DecodeState
+-- ======>
+instance (k_aq1i ~ A_Lens,
+          a_aq1j ~ Map String Bool,
+          b_aq1k ~ Map String Bool) =>
+         LabelOptic "dsSolution" k_aq1i DecodeState DecodeState a_aq1j b_aq1k where
+  {-# INLINE labelOptic #-}
+  labelOptic
+    = lensVL
+        (\ f_aq1l s_aq1m
+           -> case s_aq1m of {
+                DecodeState x1_aq1n x2_aq1o
+                  -> (fmap (\ y_aq1p -> (DecodeState x1_aq1n) y_aq1p))
+                       (f_aq1l x2_aq1o) })
+instance (k_aq1q ~ A_Lens,
+          a_aq1r ~ Map Int VarProps,
+          b_aq1s ~ Map Int VarProps) =>
+         LabelOptic "dsVarProps" k_aq1q DecodeState DecodeState a_aq1r b_aq1s where
+  {-# INLINE labelOptic #-}
+  labelOptic
+    = lensVL
+        (\ f_aq1t s_aq1u
+           -> case s_aq1u of {
+                DecodeState x1_aq1v x2_aq1w
+                  -> (fmap (\ y_aq1x -> (DecodeState y_aq1x) x2_aq1w))
+                       (f_aq1t x1_aq1v) })
 
 {-----------------------------------------------------------------------------}
 
 newtype EVar a = EVar Int
 
-type EnS = StateT EncodeState Identity
-newtype EncodeM a = EncodeM { toStateT :: EnS a }
+type EnS = StateT EncodeState (GenNameT VarName Identity)
+type DeS = StateT DecodeState EnS
+
+newtype EncodeM a = EncodeM { unEncodeM :: EnS a }
     deriving (Functor, Applicative, Monad)
 
--- internal
-liftEncode :: (a -> EnS b) -> a -> EncodeM b
-liftEncode f x = EncodeM $ f x
-
--- internal
-esIncIndex :: EnS Int
-esIncIndex = do
-    i <- use #esNextIndex
-    modifying #esNextIndex (+1)
-    return i
-
--- internal
-autoName :: String -> EnS (Int, String)
-autoName nx = let
-    check name err = use (#esNameMap % at name) >>= \case
-        Just _  -> err
-        Nothing -> return ()
-    in case nx of
-    "" -> do
-        i <- esIncIndex
-        let name = show i
-        check name $ error "EncodeM interal error"
-        return (i, name)
-    name -> do
-        i <- esIncIndex
-        check name $ error $ "Variable " ++ show name ++ " is already defined!"
-        return (i, name)
-
-newChoiceVar :: String -> [Int] -> EncodeM (EVar Int)
-newChoiceVar namex dom = EncodeM $ do
-    (i, name) <- autoName namex
-    modifying #esVarProps $ Map.insert i (EncodeSet dom)
-    modifying #esConstraints $ (choose name dom :)
-    modifying #esNameMap $ Map.insert name i
-    return $ EVar i
+newtype DecodeM a = DecodeM { unDecodeM :: DeS a }
+    deriving (Functor, Applicative, Monad)
 
 runEncodeM :: EncodeM a -> (a, EncodeState)
-runEncodeM m = runIdentity $ runStateT (toStateT m) initEncodeState
+runEncodeM m = runIdentity $ runGenNameTString 1 $ do
+    setNamePrefix "_"   -- unnamed variables start with underscores
+    runStateT (unEncodeM m) initEncodeState
+
+withSolution :: DecodeM a -> EncodeM (Maybe a)
+withSolution m = EncodeM $ do
+    cs <- use #esConstraints
+    props <- use #esVarProps
+    -- FIXME don't use unsafe simpleSolve
+    let soln = simpleSolve (forAll cs id)
+    (v, _) <- runStateT (unDecodeM m) (DecodeState props soln)
+    return (Just v)
+
+newChoiceVar :: HasCallStack => String -> [Int] -> EncodeM (EVar Int)
+newChoiceVar "" dom = EncodeM (generateName "") >>= (`newChoiceVar` dom)
+newChoiceVar name dom = EncodeM $ do
+    -- FIXME unsafe
+    i <- unsafeNewExactName name
+    modifying #esVarProps $ Map.insert i (EncodeSet dom)
+    modifying #esConstraints (choose name dom :)
+    return $ EVar i
+
+getDom :: Int -> DeS [Int]
+getDom i = do
+    (mp :: Maybe VarProps) <- use (#dsVarProps % at i)
+    case mp of
+        Nothing             -> error "Invalid variable"
+        Just (EncodeSet s)  -> return s
+
+getChoiceVal :: EVar Int -> DecodeM Int
+getChoiceVal (EVar i) = DecodeM $ do
+    n <- unsafeNameOf i
+    dom <- getDom i
+    soln <- use #dsSolution
+    return $ decodeChoose n dom soln
 
 {-----------------------------------------------------------------------------}
 -- Encoding variable assignments

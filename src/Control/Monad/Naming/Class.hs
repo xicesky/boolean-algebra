@@ -13,11 +13,15 @@ import Missing.Bimap
 import qualified Missing.Bimap as Bimap
 import Missing.Optics
 
+import GHC.Stack (HasCallStack)
+
 {-
 FIXME:
     - Documentation
 
 TODO / Ideas:
+    - Need an Arbitrary instance for testing!
+
     - Create a module Control.Monad.Naming that hides internals
 
     - The state... functions don't give us any laws to hold on to.
@@ -82,8 +86,8 @@ instance MonadGenName n m => MonadGenName n (StateT s m) where
 {-----------------------------------------------------------------------------}
 -- Internal utilities
 
-internalGenerateName :: MonadGenName n m => n -> m n
-internalGenerateName prefix = do
+generateName :: MonadGenName n m => n -> m n
+generateName prefix = do
     names <- sGet stateNames
     prefix0 <- sGet statePrefix
     nFun <- sGet stateScheme
@@ -101,22 +105,27 @@ newIndex = stateIndex $ \i -> (i, i+1)
 peekIndex :: MonadUniqueInt m => m Int
 peekIndex = sGet stateIndex
 
--- | FIXME This can /fail/
-newExactName :: forall n m. MonadName n m => n -> m Int
-newExactName name = do
-    i <- newIndex
-    stateNames $ \names -> (i, ins i name names)
-    where
-    ins :: Int -> n -> Bimap Int n -> Bimap Int n
-    ins va vb map = case Bimap.insert va vb map of
-        Left KeyExistsError     -> error $ "Index " ++ show va ++ " already exists"
-        Left ValueExistsError   -> error "Name already exists"
-        Right m                 -> m
+newExactName :: forall n m. MonadName n m => n -> m (Maybe Int)
+newExactName name = indexOf name >>= \case
+    Just _  -> return Nothing
+    Nothing -> do
+        i <- newIndex
+        ns <- sGet stateNames
+        case Bimap.insert i name ns of
+            Right m                 -> sSet stateNames m >> return (Just i)
+            -- This should never happen, we just created a new index - TODO test
+            Left KeyExistsError     -> error "Index already exists"
+            -- This should never happen, we just checked indexOf - TODO test
+            Left ValueExistsError   -> error "Name already exists"
+
+unsafeNewExactName :: forall n m. (HasCallStack, MonadName n m) => n -> m Int
+unsafeNewExactName name = fromMaybe (error "unsafeNewExactName") <$> newExactName name
 
 newNamedWithPrefix :: MonadGenName n m => n -> m Int
 newNamedWithPrefix prefix = do
-    n <- internalGenerateName prefix
-    newExactName n
+    n <- generateName prefix
+    -- Should not fail if the generator works correctly - TODO test
+    unsafeNewExactName n
 
 newNamed :: MonadGenName n m => m Int
 newNamed = newNamedWithPrefix mempty
@@ -132,6 +141,11 @@ nameOf i = Bimap.lookup i <$> getNameMap
 
 indexOf :: MonadName n m => n -> m (Maybe Int)
 indexOf n = Bimap.lookupR n <$> getNameMap
+
+isNameTaken :: MonadName n m => n -> m Bool
+isNameTaken n = indexOf n >>= \case
+    Nothing -> return False
+    Just _  -> return True
 
 -- | /Unsafe/ version of nameOf
 unsafeNameOf :: MonadName n m => Int -> m n
@@ -150,4 +164,5 @@ of all names, for example:
 autoMapName :: MonadName n m => n -> m Int
 autoMapName n = indexOf n >>= \case
     Just i      -> return i
-    Nothing     -> newExactName n   -- TODO test: should not fail here
+    -- TODO test: should not fail here, we just checked indexOf
+    Nothing     -> unsafeNewExactName n

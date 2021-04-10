@@ -80,7 +80,7 @@ instance (k_a73E ~ A_Lens, a_a73F ~ Int, b_a73G ~ Int) =>
 {-----------------------------------------------------------------------------}
 
 -- | Monad transformer with the ability to map names.
-newtype NamingT n m a = NamingT { toStateT :: StateT (NamingTState n) m a }
+newtype NamingT n m a = NamingT { unNamingT :: StateT (NamingTState n) m a }
 
 deriving instance Functor m => Functor (NamingT n m)
 deriving instance Monad m => Applicative (NamingT n m)
@@ -102,7 +102,7 @@ instance (Monad m, Ord n) => MonadName n (NamingT n m) where
 runNamingT :: forall m n a. (Monad m, Ord n) =>
     Int -> NamingT n m a -> m a
 runNamingT initialIndex namet = do
-    (a, _) <- runStateT (toStateT namet) initNamingTState
+    (a, _) <- runStateT (unNamingT namet) initNamingTState
     return a
     where
         initNamingTState :: NamingTState n
