@@ -8,6 +8,7 @@ module BooleanAlgebra.Problem.Encoding where
 
 import Prelude hiding (all, and, or, not, (&&), (||))
 
+import Data.String (fromString)
 import Data.Maybe (catMaybes)
 import Data.Foldable (foldl')
 import Data.Functor.Identity
@@ -24,6 +25,12 @@ import Optics.TH (makeFieldLabelsWith, noPrefixFieldLabels)
 import Optics.State (modifying, use)
 import Data.Map.Optics
 import qualified Optics.State as ST
+
+-- For pretty-printing encoding state
+import Prettyprinter
+import Missing.Prettyprinter
+import Term.Prettyprinter
+import BooleanAlgebra.Base.Pretty
 
 import Control.Monad.Naming.Class
 import Control.Monad.Naming.GenNameT hiding (toStateT)
@@ -60,6 +67,10 @@ I think we are mixing possibly separate problems here:
     Since the chosen encoding is important for decoding, the encoding
     also needs to be part of a variable. The supported operations
     on variables also depend on a specific encoding.
+    Even for uniquely choosing a variable from a finite set of integers
+    there are different possible encodings, for example "one hot" (with
+    several variants), "unary" or "binary" encodings. See the papers
+    below for some examples.
 
 - Encoding a representation for variables
     This is useful for debugging and visualizing, but not really
@@ -74,7 +85,14 @@ I think we are mixing possibly separate problems here:
     "sets" of possible values for choice variables, lists of "Maybe Bool"
     for bitvectors ...).
     We should be able to support such a structure using standard Haskell
-    techniques (esp. Functor / Traversable).
+    techniques (esp. Functor / Traversable), so just supporting encodings
+    for variables should be enough, given that variables can be used
+    transparently using existing functions.
+
+Interesting Papers:
+    - 2009 Björk - Successful SAT Encoding Techniques DOI 10.3233/SAT190085
+    - 2020 Gorjiara, Xu, Demsky - Satune: synthesizing efficient SAT encoders DOI 10.1145/3428214
+
 -}
 
 -- Variable name
@@ -170,8 +188,37 @@ instance (k_aq1q ~ A_Lens,
                        (f_aq1t x1_aq1v) })
 
 {-----------------------------------------------------------------------------}
+-- Prettyprinting
+
+-- data EncodeState = EncodeState
+--     {   esVarProps :: Map Int VarProps
+--     ,   esConstraints :: [BooleanExpr String]
+--     }
+
+instance Pretty (Map Int VarProps) where
+    pretty = viaShow
+
+-- FIXME overlaps with PrettyTerm String
+-- instance PrettyTerm t => PrettyTerm [t] where
+--     prettyTerm opts _ = aList (prettyTerm opts 0)
+
+instance PrettyTerm [BooleanExpr String] where
+    prettyTerm opts _ = aList (prettyTerm opts 0)
+
+instance PrettyTerm EncodeState where
+    prettyTerm :: PrettyOptions -> Precedence -> EncodeState -> Doc ann
+    prettyTerm opts _ (EncodeState varProps constraints) = aRecord
+        [   fromString "esVarProps = " <> pretty varProps
+        ,   fromString "esConstraints = " <> prettyTerm opts 0 constraints
+        ]
+
+instance Pretty EncodeState where
+    pretty = defaultPretty
+
+{-----------------------------------------------------------------------------}
 
 newtype EVar a = EVar Int
+    deriving (Eq)
 
 type EnS = StateT EncodeState (GenNameT VarName Identity)
 type DeS = StateT DecodeState EnS
@@ -181,6 +228,16 @@ newtype EncodeM a = EncodeM { unEncodeM :: EnS a }
 
 newtype DecodeM a = DecodeM { unDecodeM :: DeS a }
     deriving (Functor, Applicative, Monad)
+
+-- TODO: This is stupid
+class Monad m => HasVarProps m where
+    getVarProps :: Int -> m (Maybe VarProps)
+
+instance HasVarProps EnS where
+    getVarProps i = use (#esVarProps % at i)
+
+instance HasVarProps DeS where
+    getVarProps i = use (#dsVarProps % at i)
 
 runEncodeM :: EncodeM a -> (a, EncodeState)
 runEncodeM m = runIdentity $ runGenNameTString 1 $ do
@@ -192,22 +249,26 @@ withSolution m = EncodeM $ do
     cs <- use #esConstraints
     props <- use #esVarProps
     -- FIXME don't use unsafe simpleSolve
-    let soln = simpleSolve (forAll cs id)
+    let soln = simpleSolve (forAll (reverse cs) id)
     (v, _) <- runStateT (unDecodeM m) (DecodeState props soln)
     return (Just v)
 
+addConstraint :: BooleanExpr String -> EnS ()
+addConstraint c = modifying #esConstraints (c :)
+
+-- simple "one hot" encoding
 newChoiceVar :: HasCallStack => String -> [Int] -> EncodeM (EVar Int)
 newChoiceVar "" dom = EncodeM (generateName "") >>= (`newChoiceVar` dom)
 newChoiceVar name dom = EncodeM $ do
     -- FIXME unsafe
     i <- unsafeNewExactName name
     modifying #esVarProps $ Map.insert i (EncodeSet dom)
-    modifying #esConstraints (choose name dom :)
+    addConstraint $ choose name dom
     return $ EVar i
 
-getDom :: Int -> DeS [Int]
+getDom :: HasVarProps m => Int -> m [Int]
 getDom i = do
-    (mp :: Maybe VarProps) <- use (#dsVarProps % at i)
+    mp <- getVarProps i
     case mp of
         Nothing             -> error "Invalid variable"
         Just (EncodeSet s)  -> return s
@@ -218,6 +279,28 @@ getChoiceVal (EVar i) = DecodeM $ do
     dom <- getDom i
     soln <- use #dsSolution
     return $ decodeChoose n dom soln
+
+constraint :: BooleanExpr String -> EncodeM ()
+constraint cond = EncodeM $ addConstraint cond
+
+(&/=) :: EVar Int -> Int -> EncodeM ()
+(EVar a) &/= b = EncodeM $ do
+    dom <- getDom a
+    n <- unsafeNameOf a
+    -- TODO use set instead of list
+    when (b `elem` dom) $ addConstraint $
+        not $ assign n b
+
+(&/=&) :: EVar Int -> EVar Int -> EncodeM ()
+(EVar a) &/=& (EVar b) = EncodeM $ do
+    domA <- getDom a
+    domB <- getDom b
+    na <- unsafeNameOf a
+    nb <- unsafeNameOf b
+
+    forM_ domB $ \v ->
+        when (v `elem` domA) $ addConstraint $
+            (assign na v) `excludes` (assign nb v)
 
 {-----------------------------------------------------------------------------}
 -- Encoding variable assignments

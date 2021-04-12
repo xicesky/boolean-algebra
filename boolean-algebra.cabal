@@ -52,6 +52,7 @@ library
       Missing.IO
       Missing.Misc
       Missing.Optics
+      Missing.Prettyprinter
       Missing.Textual
       Missing.Void
       Term.Inject
