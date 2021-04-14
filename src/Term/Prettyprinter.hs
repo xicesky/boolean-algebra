@@ -39,6 +39,7 @@ import Data.Bool (bool)
 import Prettyprinter
 -- For diagnosis - showing internal pretty-printer state
 import Prettyprinter.Internal.Debug (diag, Diag)
+import Missing.Prettyprinter
 
 import Term.Term
 
@@ -63,8 +64,6 @@ Used when omitting options, e.g. by using 'pretty' on 'Term'
 -}
 defaultPrettyOptions :: PrettyOptions
 defaultPrettyOptions = PrettyOptions True
-
-type Precedence = Int
 
 {- | Class of pretty-printable terms
 -}
@@ -246,36 +245,3 @@ instance PrettyTerm Void
 instance PrettyUnaryOp Void
 instance PrettyBinaryOp Void
 instance PrettyFlatOp Void
-
-{-----------------------------------------------------------------------------}
-
--- | Diagnosis tool for showing the internal representation
-diag' :: Doc () -> Diag ()
-diag' = diag . fuse Deep
-
--- | Nested, left-aligned, comma-seperated list
-aList :: (a -> Doc ann) -> [a] -> Doc ann
-aList pp xs = flatAlt multiline singleline where
-    sep = ", "
-    docs = fmap pp xs
-    multiline = nest 4 $ line
-        -- FIXME: encloseSep uses 'cat' which will sometimes display
-        -- elements in the same line. We want all or nothing.
-        <> encloseSep "[ " (line <> "]") sep docs
-    singleline = encloseSep "[" "]" sep docs
-
--- | Show parentheses depending on precedence
-parensP :: Precedence -> Precedence -> Doc ann -> Doc ann
-parensP d prec
-    | d > prec  = parens
-    | otherwise = id
-
--- | >>> backticks "x"
--- `x`
-backticks :: Doc ann -> Doc ann
-backticks = enclose backtick backtick
-
--- | >>> backtick
--- `
-backtick :: Doc ann
-backtick = fromString "`"
