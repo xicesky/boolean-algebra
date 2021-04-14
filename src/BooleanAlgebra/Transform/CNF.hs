@@ -57,8 +57,13 @@ data CNFStats = CNFStats
     deriving (Show, Eq)
 
 -- | Collect some statistics of a CNF representation.
--- FIXME Does not work on the empty CNF!
 cnfStats :: CNF a -> CNFStats
+cnfStats (CNF (Conjunction [])) = CNFStats  -- Empty CNF
+    {   nClauses = 0
+    ,   minClauseLength = 0
+    ,   maxClauseLength = 0
+    ,   averageClauseLength = 0
+    }
 cnfStats (CNF (Conjunction xs)) = CNFStats
     {   nClauses = length xs
     ,   minClauseLength = minimum clens
