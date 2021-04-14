@@ -29,9 +29,10 @@ import BooleanAlgebra.Transform.Simplify
 import BooleanAlgebra.Transform.CNF
 import BooleanAlgebra.Transform.Variable
 
--- TODO: Solver is probably an extra
+{- TODO: Library / project organisation.
+
+The following modules should probably be extras and put in a separate package.
+-}
 import BooleanAlgebra.Solver.Class
 import BooleanAlgebra.Solver.Basic
-
--- FIXME: Those should probably be "extras" and not in the main lib
 import BooleanAlgebra.Support.Arbitrary
