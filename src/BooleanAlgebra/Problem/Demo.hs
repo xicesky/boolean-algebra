@@ -32,13 +32,11 @@ Interactive:
 testChooseInt01
 
 -- 3x3 Latin square
-print $ pretty $ solveAssignment $ lasqProb 3
+print $ prettyBool $ snd $ runEncodeM $ lasqProbM 3
+solveLasqM 3
 
 -- 4x4 sudoku
 solveSudoku
-
--- Testing EncodeM
-print $ prettyBool $ snd $ runEncodeM $ lasqProbM 2
 
 -}
 
@@ -107,77 +105,6 @@ chop n xs = ys : chop n zs where
     (ys, zs) = splitAt n xs
 
 {-----------------------------------------------------------------------------}
--- Latin square
-
-lasqProb :: Int -> BooleanExpr String
-lasqProb n = let
-
-    -- 1. "Giving names" to variables in our structure
-    ivar :: Int -> Int -> VarName
-    ivar x y = "f(" ++ show x ++ "," ++ show y ++ ")"
-
-    structure :: Matrix VarName
-    structure =
-        [   [ ivar x y | x <- [1..n] ]  -- single row
-        | y <- [1..n]
-        ]
-
-    -- 2. Assigning the domain of variables
-    vardom = [1..n]
-
-    dom :: BooleanAlgebra b String => b String
-    dom =
-        all structure $ \row ->
-        all row $ \cell ->
-        choose cell vardom
-
-    -- 3. Formulating rules
-    ruleRows :: BooleanAlgebra b String => b String
-    ruleRows =
-        all (rows structure) $ \row ->
-        allDifferent vardom row
-
-    ruleCols :: BooleanAlgebra b String => b String
-    ruleCols =
-        all (cols structure) $ \col ->
-        allDifferent vardom col
-
-    prob :: BooleanExpr String
-    prob = dom && ruleRows && ruleCols
-
-    in prob
-
-decodeLasq :: Int -> Map String Bool -> Matrix Int
-decodeLasq n r = let
-    -- FIXME duplication
-
-    -- 1. "Giving names" to variables in our structure
-    ivar :: Int -> Int -> VarName
-    ivar x y = "f(" ++ show x ++ "," ++ show y ++ ")"
-
-    structure :: Matrix VarName
-    structure =
-        [   [ ivar x y | x <- [1..n] ]  -- single row
-        | y <- [1..n]
-        ]
-
-    -- 2. Domain of variables
-    vardom = [1..n]
-
-    -- decodeChoose :: String -> [Int] -> Map String Bool -> Int
-    in fmap (fmap (\v -> decodeChoose v vardom r)) structure
-
-solveLasq :: Int -> IO ()
-solveLasq n = let
-    problem :: BooleanExpr String
-    problem = lasqProb n
-
-    solution :: Matrix Int
-    solution = decodeLasq n $ simpleSolve problem
-
-    in print $ pretty solution
-
-{-----------------------------------------------------------------------------}
 -- Latin square using encodeM
 
 lasqProbM :: Int -> EncodeM (Matrix (EVar Int))
@@ -194,28 +121,10 @@ lasqProbM n = let
         ]
 
     -- 2. Formulating rules
-    ruleRows :: Matrix (EVar Int) -> EncodeM ()
-    ruleRows structure =
-        -- TODO Clumsy
-        forM_ (rows structure) $ \row ->
-        forM row $ \v1 ->
-        forM row $ \v2 ->
-        when (v1 /= v2) $
-        v1 &/=& v2
-
-    ruleCols :: Matrix (EVar Int) -> EncodeM ()
-    ruleCols structure =
-        -- TODO Clumsy
-        forM_ (cols structure) $ \col ->
-        forM col $ \v1 ->
-        forM col $ \v2 ->
-        when (v1 /= v2) $
-        v1 &/=& v2
-
     in do
         s <- structure
-        ruleRows s
-        ruleCols s
+        forM_ (rows s) $ \row -> allDifferent row
+        forM_ (cols s) $ \col -> allDifferent col
         return s
 
 solveLasqM :: Int -> IO ()
