@@ -51,8 +51,6 @@ instance BooleanAlgebra b v => BooleanAlgebra (BAMeh a b) v where
 {-----------------------------------------------------------------------------}
 -- Pre-defined rules and quantifiers
 
--- FIXME: Use non-empty lists or throw a dedicated error
-
 {- | For all values then given predicate is true.
 
 ∀(x ∈ s). p(x)

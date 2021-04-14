@@ -131,29 +131,3 @@ instance Arbitrary (BooleanExpr String) where
     shrink (BBOp op a b) = a : b : [BBOp op a' b' | (a', b') <- shrink (a, b)]
     shrink (BFlOp op xs) = xs ++ [BFlOp op xs' | xs' <- shrink xs]
     shrink _ = []
-
--- -- FIXME: Weird slow and ineffective
--- -- Generate BooleanExprLit directly instead
-
--- data Named t = Named [String] t
---     deriving (Show, Eq, Ord, Functor)
--- toNamed (ns, t) = Named ns t
-
--- instance Arbitrary (Named BooleanExprLit) where
---     arbitrary = sized $ \case
---         0 -> return $ Named ["?"] (iBooleanLit 0)
---         _ -> let
---             t0 :: Gen ([String], MaybeTrivial BooleanExprLit)
---             t0 = simplify <$> (arbitrary :: Gen BooleanExpr)
---             -- Try until you get it right :)
---             t1 :: Gen (Named BooleanExprLit)
---             t1 = t0 >>= \case
---                 (_, Left _) -> arbitrary
---                 (names, Right (t :: BooleanExprLit))
---                     -> return $ Named names t
---             in -- trace ("arbitrary (BooleanExprLit) ") $
---                 t1
-
--- instance Arbitrary (Named CNF) where
---     arbitrary = scale (`div` 2) $
---         toNamed . toCNF <$> (arbitrary :: Gen BooleanExpr)

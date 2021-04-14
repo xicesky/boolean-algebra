@@ -28,7 +28,7 @@ import Data.ByteString.Builder (Builder, hPutBuilder)
 
 import Control.Monad.IO.Class
 
-{- FIXME: Instead of introducing another incompatibility,
+{- TODO: Instead of introducing another incompatibility,
     make a class of "stuff that can be read and written from files".
     And use Missing.Textual.
 -}

@@ -32,6 +32,11 @@ module BooleanAlgebra.Base.Class
 import Prelude hiding (and, or, not, (&&), (||))
 import qualified Prelude as P
 
+{-
+TODO:
+    - Specify laws for class definitions where possible
+-}
+
 {-----------------------------------------------------------------------------}
 
 {- | Values that can be negated using @not@.
@@ -39,7 +44,6 @@ import qualified Prelude as P
 In Haskell we can't make boolean values use negative signs.
 -}
 class PreBoolean b where
-    -- FIXME: How to provide an actual law without specifying eval?
     {- | Negation, ¬
         Guarantees: @not (not a) ~ a@.
     -}
@@ -48,7 +52,6 @@ class PreBoolean b where
 -- | Anything that has boolean operations
 class PreBoolean b => Boolean b where
     {-# MINIMAL and, or #-}
-    -- FIXME: How to provide an actual law without specifying eval?
     {- | Conjunction, ∧
     -}
     and :: b -> b -> b
@@ -109,11 +112,6 @@ instance Boolean Bool where
 
 instance BooleanArithmetic Bool where
     fromBool = id
-
--- FIXME: Remove and re-export Data.Bool (bool)
-ifthenelse :: Bool -> a -> a -> a
-ifthenelse True a _ = a
-ifthenelse False _ b = b
 
 {-----------------------------------------------------------------------------}
 

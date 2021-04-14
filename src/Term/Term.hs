@@ -52,7 +52,11 @@ import Missing.Void
 -- | Fixpoint type for 'Functor's of 4rth order.
 newtype Fix4 f a b c = Fix4 { unFix4 :: f a b c (Fix4 f a b c) }
 
--- FIXME: Fix4 can actually even be an instance of Show2
+{- 
+TODO: Fix4 can actually even be an instance of Show2, but we would need
+a new @Show3@ instance for a constraint @Show3 (f a)@, which is not part of
+@Data.Functor.Classes@ in base.
+-}
 instance Show2 (f a b) => Show1 (Fix4 f a b) where
     liftShowsPrec :: forall c. (Int -> c ->  ShowS) -> ([c] -> ShowS)
         -> Int -> Fix4 f a b c -> ShowS
@@ -324,11 +328,15 @@ pattern BFlOp o xs  = Fix4 (RecT (FlatOp o xs))
 {-----------------------------------------------------------------------------}
 -- Utilities
 
-{- FIXME: 
-Have to use the quickcheck class for recursion into values
-This means we need a full Arbitrary instance.
-So first clean up the instances from BooleanAlgebra.Support.Arbitrary,
-put them here and then implement generic shrinking.
+{- TODO: quickCheck compatibility / shrinkTerm
+
+Provide helpers to implement @Arbitrary@ instances for terms. This should
+probably be in a support module.
+
+shrinkTerm: We have to use the quickcheck class for recursion into values. This
+means we need a full Arbitrary instance. So first clean up the instances from
+BooleanAlgebra.Support.Arbitrary, put them here and then implement generic
+shrinking.
 
 -- Produce smaller subsets of a term.
 
