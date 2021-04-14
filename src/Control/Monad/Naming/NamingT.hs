@@ -8,6 +8,7 @@ module Control.Monad.Naming.NamingT where
 
 -- containers
 import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 
 -- mtl / transformers
 import Control.Monad.Identity
@@ -119,3 +120,11 @@ slurpNames initialIndex fn = runIdentity $ runNamingT initialIndex $ do
     fi <- traverse autoMapName fn
     nm <- Bimap.toMap <$> getNameMap
     return (nm, fi)
+
+{- | Re-attach names to a term
+
+Inverse of 'slurpNames'.
+-}
+reattachNames :: (Ord n, Functor f) =>
+    Map Int n -> f Int -> f n
+reattachNames map = fmap (map Map.!)

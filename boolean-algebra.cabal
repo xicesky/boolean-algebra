@@ -135,8 +135,8 @@ test-suite boolean-algebra-test
       BooleanAlgebra.Base.PrettySpec
       BooleanAlgebra.Solver.ClassSpec
       BooleanAlgebra.Transform.CNFSpec
-      BooleanAlgebra.Transform.VariableSpec
       Control.Monad.Naming.GenNameTSpec
+      Control.Monad.Naming.NamingTSpec
       Paths_boolean_algebra
   hs-source-dirs:
       test
