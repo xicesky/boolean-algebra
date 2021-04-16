@@ -5,7 +5,6 @@ import Data.Void (Void)
 import Control.Monad
 import qualified Data.Map.Strict as Map
 import Control.Monad.IO.Class
-import Criterion.Main
 import Text.Pretty.Simple (pPrint)
 
 import BooleanAlgebra
@@ -97,8 +96,6 @@ main =
     -- minisatDemo
     -- bugDemo
     -- prettyPrintDemo
-
--- TODO: Use criterion for benchmarks.
 
 -- defaultMain [
 --     bgroup "fib"

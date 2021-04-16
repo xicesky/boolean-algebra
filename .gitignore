@@ -1,23 +1,23 @@
-# Ignore stack build dir
-.stack-work/
+# Note:
+#   Do not ignore the *.cabal files, they should be in git
+#   For further reading, see https://www.fpcomplete.com/blog/storing-generated-cabal-files/
 
-# Ignore the usual temporaries / backups / swapfiles...
+# General temporaries, backups, swapfiles...
 *~
 *.sw[pon]
 *.bak
 .DS_Store
 
-# Ignore our dummy dir (used for examples and ad-hoc code)
+# Project specific temporaries, local and build directories
 /local
+.stack-work/
+*-benchmarks.html
 
-# Sublime Text
+# IDE files
 *.sublime-project
 *.sublime-workspace
 
-# Generated files
-/benchmark-report.html
-
-# The following are from https://github.com/github/gitignore/blob/master/Haskell.gitignore
+# Haskell-specifics from https://github.com/github/gitignore/blob/master/Haskell.gitignore
 dist
 dist-*
 cabal-dev

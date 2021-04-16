@@ -42,7 +42,6 @@ dependencies:
 - prettyprinter
 - prettyprinter-ansi-terminal
 - pretty-simple
-- criterion
 - QuickCheck
 
 default-extensions:
@@ -98,3 +97,16 @@ tests:
     - QuickCheck
     - hspec
     - quickcheck-instances
+
+benchmarks:
+  boolean-algebra-benchmarks:
+    main:                BenchMain.hs
+    source-dirs:         benchmark
+    ghc-options:
+    - -rtsopts
+    - -threaded
+    - -with-rtsopts=-N
+    dependencies:
+    - boolean-algebra
+    - optparse-applicative
+    - criterion

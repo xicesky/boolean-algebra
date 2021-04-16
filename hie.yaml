@@ -11,11 +11,11 @@ cradle:
             - path: "./src"
               component: "boolean-algebra:lib"
 
-            - path: "./app/Main.hs"
-              component: "boolean-algebra:exe:boolean-algebra-exe"
-
-            - path: "./app/Paths_boolean_algebra.hs"
+            - path: "./app"
               component: "boolean-algebra:exe:boolean-algebra-exe"
 
             - path: "./test"
               component: "boolean-algebra:test:boolean-algebra-test"
+
+            - path: "./benchmark"
+              component: "boolean-algebra:bench:boolean-algebra-benchmarks"

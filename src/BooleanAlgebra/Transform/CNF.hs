@@ -49,9 +49,9 @@ import BooleanAlgebra.Transform.Variable
 -- Stats of CNF clauses
 
 data CNFStats = CNFStats
-    {   nClauses :: Int
-    ,   minClauseLength :: Int
-    ,   maxClauseLength :: Int
+    {   nClauses :: Float
+    ,   minClauseLength :: Float
+    ,   maxClauseLength :: Float
     ,   averageClauseLength :: Float
     }
     deriving (Show, Eq)
@@ -65,9 +65,9 @@ cnfStats (CNF (Conjunction [])) = CNFStats  -- Empty CNF
     ,   averageClauseLength = 0
     }
 cnfStats (CNF (Conjunction xs)) = CNFStats
-    {   nClauses = length xs
-    ,   minClauseLength = minimum clens
-    ,   maxClauseLength = maximum clens
+    {   nClauses = realToFrac $ length xs
+    ,   minClauseLength = realToFrac $ minimum clens
+    ,   maxClauseLength = realToFrac $ maximum clens
     ,   averageClauseLength = average clens
     } where
     clens :: [Int]
